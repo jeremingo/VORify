@@ -24,15 +24,15 @@ all: $(EXEC)
 
 # Link the executable from object files
 $(EXEC): $(OBJS)
-    $(CC) $(CFLAGS) -o $(EXEC) $(OBJS) $(LIBS)
+	$(CC) $(CFLAGS) -o $(EXEC) $(OBJS) $(LIBS)
 
 # Compile source files into object files
 %.o: %.c
-    $(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Clean up build files
 clean:
-    rm -f $(OBJS) $(EXEC)
+	rm -f $(OBJS) $(EXEC)
 
 # Phony targets (not actual files)
 .PHONY: all clean
