@@ -1,62 +1,94 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <rtl-sdr.h>
+#include <stdio.h>
+#include <unistd.h>
 
-#define DEFAULT_FREQUENCY 978000000  // 978 MHz
-#define DEFAULT_SAMPLE_RATE 2048000  // 2.048 MS/s
-#define BUFFER_LENGTH (16 * 16384)   // Buffer length
+#include <signal.h>
+#include <getopt.h>
+#include <math.h>
+#include <complex.h>
+#include "vorify.h"
 
-void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx) {
-    // Process the buffer data here
-    printf("Received %u bytes\n", len);
+int verbose = 0;
+int interval=2;
+int freq ;
+
+int initRtl(int dev_index, int fr);
+int runRtlSample(void);
+int devid = 0;
+int ppm = 0;
+int gain = 1000;
+
+static void sighandler(int signum);
+
+static void usage(void)
+{
+	fprintf(stderr,
+		"vor receiver Copyright (c) 2018 Thierry Leconte \n\n");
+	fprintf(stderr, "Usage: vorify [-g gain] [-l interval ] [-p ppm] [-r device] frequency in MHz\n\n");
+	fprintf(stderr, " -g gain :\t\t\tgain in tenth of db (ie : 500 = 50 db)\n");
+	fprintf(stderr, " -p ppm :\t\t\tppm freq shift\n");
+	fprintf(stderr, " -r n :\t\t\trtl device number\n");
+	fprintf(stderr, " -l interval :\t\t\ttime between two measurements\n");
+	exit(1);
 }
 
-int main() {
-    int device_index = 0;  // Use the first detected device
-    rtlsdr_dev_t *dev = NULL;
-    int r;
+int main(int argc, char **argv)
+{
+	int i, c;
+	struct sigaction sigact;
 
-    // Open the RTL-SDR device
-    r = rtlsdr_open(&dev, device_index);
-    if (r < 0) {
-        fprintf(stderr, "Failed to open RTL-SDR device\n");
-        return EXIT_FAILURE;
-    }
+	while ((c = getopt(argc, argv, "vg:l:p:r:h")) != EOF) {
+		switch ((char)c) {
+		case 'v':
+			verbose = 1;
+			break;
+		case 'l':
+			interval = atoi(optarg);
+			break;
+		case 'g':
+			gain = atoi(optarg);
+			break;
+		case 'p':
+			ppm = atoi(optarg);
+			break;
+		case 'r':
+			devid = atoi(optarg);
+			break;
+		case 'h':
+		default:
+			usage();
+		}
+	}
 
-    // Set the center frequency
-    r = rtlsdr_set_center_freq(dev, DEFAULT_FREQUENCY);
-    if (r < 0) {
-        fprintf(stderr, "Failed to set center frequency\n");
-        rtlsdr_close(dev);
-        return EXIT_FAILURE;
-    }
+	if (optind >= argc) {
+		fprintf(stderr, "need frequency\n");
+		exit(-2);
+	}
+	freq = (int)(atof(argv[optind]) * 1000000.0);
 
-    // Set the sample rate
-    r = rtlsdr_set_sample_rate(dev, DEFAULT_SAMPLE_RATE);
-    if (r < 0) {
-        fprintf(stderr, "Failed to set sample rate\n");
-        rtlsdr_close(dev);
-        return EXIT_FAILURE;
-    }
+	if(freq<108000000 || freq > 118000000) {
+		fprintf(stderr, "invalid frequency\n");
+		exit(-2);
+	}
 
-    // Reset the buffer
-    r = rtlsdr_reset_buffer(dev);
-    if (r < 0) {
-        fprintf(stderr, "Failed to reset buffer\n");
-        rtlsdr_close(dev);
-        return EXIT_FAILURE;
-    }
+	sigact.sa_handler = sighandler;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGQUIT, &sigact, NULL);
 
-    // Read samples asynchronously
-    r = rtlsdr_read_async(dev, rtlsdr_callback, NULL, 0, BUFFER_LENGTH);
-    if (r < 0) {
-        fprintf(stderr, "Failed to read samples asynchronously\n");
-        rtlsdr_close(dev);
-        return EXIT_FAILURE;
-    }
+	if (initRtl(devid, freq))
+		exit(-1);
+	runRtlSample();
 
-    // Close the RTL-SDR device
-    rtlsdr_close(dev);
+	sighandler(0);
+	exit(0);
 
-    return EXIT_SUCCESS;
+}
+
+
+static void sighandler(int signum)
+{
+	exit(0);
 }
