@@ -14,6 +14,18 @@ typedef struct {
  complex double xv[8], yv[8];
 } filterstate_t;
 
+VORStation vorStations[] = {
+    {"BEN GURION", 113.50, 32.0131, 34.8752, 100.0},
+    {"BEER-SHEBA", 114.30, 31.2862, 34.7213, 853.0},
+    {"METZADA", 115, 31.3308, 35.39, -1200.0},
+    {"NATANIA", 112.40, 32.3323, 34.9677, 100.0},
+    {"OVDA", 114.10, 29.9656, 34.9469, 1513.0},
+    {"ROSH PINA", 115.30, 32.9822, 35.5733, 897.0},
+    {"ZOFAR", 115.60, 30.5573, 35.1608, 100.0}
+};
+
+int numStations = sizeof(vorStations) / sizeof(vorStations[0]);
+
 static complex double filter510(complex double V , filterstate_t *st) {
 	st->xv[0] = st->xv[1]; st->xv[1] = st->xv[2]; st->xv[2] = st->xv[3]; st->xv[3] = st->xv[4]; 
         st->xv[4] = V ;
