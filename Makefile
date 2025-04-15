@@ -13,7 +13,7 @@ INCLUDES =
 LIBS=  -lusb-1.0 -lpthread -L /usr/local/lib -lrtlsdr -lm -lrt 
 
 # Source files
-SRCS = vorify.c vor.c rtl.c
+SRCS = vor.c rtl.c bluetooth.c mock_gps.c
 
 # Object files (derived from source files)
 OBJS = $(SRCS:.c=.o)
