@@ -5,12 +5,30 @@
 #include <sys/socket.h>
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
 
 static int server_socket = -1;
 static int client_socket = -1;
 
 void bluetooth_init(const char *device_name) {
     struct sockaddr_rc loc_addr = { 0 };
+
+    // Set the Bluetooth device name
+    int dev_id = hci_get_route(NULL);
+    int hci_sock = hci_open_dev(dev_id);
+    if (dev_id < 0 || hci_sock < 0) {
+        perror("Failed to open HCI device");
+        exit(EXIT_FAILURE);
+    }
+
+    if (hci_write_local_name(hci_sock, device_name, 0) < 0) {
+        perror("Failed to set Bluetooth device name");
+        close(hci_sock);
+        exit(EXIT_FAILURE);
+    }
+    close(hci_sock);
+    printf("Bluetooth device name set to '%s'\n", device_name);
 
     // Create a Bluetooth socket
     server_socket = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
