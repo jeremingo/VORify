@@ -7,9 +7,56 @@
 #include <bluetooth/rfcomm.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#include <bluetooth/sdp.h>
+#include <bluetooth/sdp_lib.h>
 
 static int server_socket = -1;
 static int client_socket = -1;
+
+sdp_session_t *register_service(uint8_t rfcomm_channel) {
+  uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid;
+  sdp_list_t *l2cap_list = 0, *rfcomm_list = 0;
+  sdp_list_t *proto_list = 0, *access_proto_list = 0, *root_list = 0;
+
+  sdp_record_t *record = sdp_record_alloc();
+
+  // Set the service class
+  sdp_uuid16_create(&svc_uuid, SERIAL_PORT_SVCLASS_ID);
+  sdp_set_service_id(record, svc_uuid);
+
+  // Set the service browse group
+  sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+  root_list = sdp_list_append(0, &root_uuid);
+  sdp_set_browse_groups(record, root_list);
+
+  // L2CAP protocol
+  sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+  l2cap_list = sdp_list_append(0, &l2cap_uuid);
+
+  // RFCOMM protocol and channel
+  sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+  sdp_data_t *channel_data = sdp_data_alloc(SDP_UINT8, &rfcomm_channel);
+  rfcomm_list = sdp_list_append(0, &rfcomm_uuid);
+  rfcomm_list = sdp_list_append(rfcomm_list, channel_data);
+
+  // Build protocol list
+  proto_list = sdp_list_append(0, l2cap_list);
+  proto_list = sdp_list_append(proto_list, rfcomm_list);
+  access_proto_list = sdp_list_append(0, proto_list);
+  sdp_set_access_protos(record, access_proto_list);
+  sdp_set_info_attr(record, "My BT Service", "RaspberryPi", "Serial communication service");
+
+  sdp_session_t *session = sdp_connect(BDADDR_ANY, BDADDR_LOCAL, SDP_RETRY_IF_BUSY);
+  if (!session) {
+    perror("sdp_connect failed");
+    sdp_record_free(record);
+    return NULL;
+  }
+  sdp_record_register(session, record, 0);
+
+  return session;
+}
+
 
 void make_device_discoverable() {
     int dev_id = hci_get_route(NULL);
@@ -87,6 +134,8 @@ void bluetooth_init(const char *device_name) {
         perror("Failed to bind Bluetooth socket");
         exit(EXIT_FAILURE);
     }
+
+    register_service(loc_addr.rc_channel);
 
     // Start listening for incoming connections
     if (listen(server_socket, 1) < 0) {
