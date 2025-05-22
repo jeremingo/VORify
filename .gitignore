@@ -1,3 +1,4 @@
 *.o
 
 bearing-calculator/vorify
+bluetooth-server/bluetooth-server
