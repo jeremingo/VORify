@@ -89,12 +89,20 @@ std::vector<VORStation> readCSV(const std::string& filename) {
     return stations;
 }
 
-int main() {
-    // Change to your actual CSV file path
+int main(int argc, char* argv[]) {
+    // Usage: ./stations-within-range <lat> <lon> <range_km> [csv_file]
+    if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << " <lat> <lon> <range_km> [csv_file]\n";
+        return 1;
+    }
+
+    double target_lat = std::atof(argv[1]);
+    double target_lon = std::atof(argv[2]);
+    double range_km = std::atof(argv[3]);
     std::string filename = "VOR.CSV";
-    double target_lat = 32.6;
-    double target_lon = 34.2;
-    double range_km = 400.0;
+    if (argc >= 5) {
+        filename = argv[4];
+    }
 
     auto stations = readCSV(filename);
 
