@@ -24,11 +24,11 @@ all: $(EXEC)
 
 # Link the executable from object files
 $(EXEC): $(OBJS)
-    $(CC) $(CFLAGS) -o $(EXEC) $(OBJS) $(LIBS)
+	$(CC) $(CFLAGS) -o $(EXEC) $(OBJS) $(LIBS)
 
 # Compile C++ source files into object files
 %.o: %.cpp
-    $(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Clean up build files
 clean:
