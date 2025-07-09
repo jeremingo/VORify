@@ -1,34 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <sys/select.h>
 #include "bluetooth.h"
 
-void generate_mock_gps_data(char *buffer, size_t buffer_size) {
-    // Mock GPS coordinates
-    double latitude = 37.7749;
-    double longitude = -122.4194;
-    double elevation = 15.0;
-
-    snprintf(buffer, buffer_size, "GPS: Lat=%.6f, Lon=%.6f, Elev=%.2f\n",
-             latitude, longitude, elevation);
-}
-
 int main() {
-    char gps_data[256];
+  char gps_data[256];
+  char last_stdin_data[256] = {0};
 
-    // Initialize the Bluetooth server
-    bluetooth_init("MockGPS");
+  // Initialize the Bluetooth server
+  bluetooth_init("MockGPS");
 
-    // Continuously send mock GPS data
-    while (1) {
-        generate_mock_gps_data(gps_data, sizeof(gps_data));
-        printf("Sending: %s", gps_data);
-        bluetooth_send(gps_data);
-        sleep(1);  // Send data every second
+  while (1) {
+    fd_set readfds;
+    struct timeval tv;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+    int retval = select(STDIN_FILENO + 1, &readfds, NULL, NULL, &tv);
+
+    if (retval == -1) {
+      perror("select()");
+      break;
+    } else if (retval) {
+      // New data on stdin
+      if (fgets(last_stdin_data, sizeof(last_stdin_data), stdin) != NULL) {
+        // Remove trailing newline
+        size_t len = strlen(last_stdin_data);
+        if (len > 0 && last_stdin_data[len - 1] == '\n') {
+          last_stdin_data[len - 1] = '\0';
+        }
+        printf("Sending from stdin: %s\n", last_stdin_data);
+        bluetooth_send(last_stdin_data);
+      }
+    } else if (last_stdin_data[0] != '\0') {
+      printf("Resending last stdin: %s\n", last_stdin_data);
+      bluetooth_send(last_stdin_data);
     }
+  }
 
-    // Stop the Bluetooth server (this will never be reached in this example)
-    bluetooth_stop();
-
-    return 0;
+  bluetooth_stop();
+  return 0;
 }
