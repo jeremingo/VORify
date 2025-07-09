@@ -32,6 +32,6 @@ $(EXEC): $(OBJS)
 
 # Clean up build files
 clean:
-    rm -f $(OBJS) $(EXEC)
+	rm -f $(OBJS) $(EXEC)
 
 .PHONY: all clean
