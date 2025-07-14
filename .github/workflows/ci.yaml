@@ -20,7 +20,15 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc librtlsdr-dev libbluetooth-dev
+        sudo apt-get install -y gcc librtlsdr-dev libbluetooth-dev autoconf automake libtool pkg-config git
+        git clone https://github.com/jgaeddert/liquid-dsp.git
+        cd liquid-dsp
+        ./bootstrap.sh
+        ./configure
+        make
+        sudo make install
+        sudo ldconfig
+        cd ..
 
     - name: Build
       run: |
