@@ -8,7 +8,7 @@ CFLAGS = -Ofast -W -I /usr/local/include/librtlsdr
 INCLUDES =
 
 # Libraries to link against
-LIBS = -lliquid
+LIBS = -lliquid -lrtlsdr
 
 # Source files (add .cpp if needed)
 SRCS = identify-station.cpp
