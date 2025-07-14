@@ -36,7 +36,6 @@ constexpr int MIN_DURATION_MS = 100;
 constexpr int MIN_DURATION_SAMPLES = PCM_RATE * MIN_DURATION_MS / 1000;
 constexpr double LOW_FREQ = 900.0;
 constexpr double HIGH_FREQ = 1100.0;
-constexpr int FIR_ORDER = 101; // Higher order = sharper filter
 
 #include "fir_coeffs_900_1100Hz.h"
 
