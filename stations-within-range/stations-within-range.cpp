@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 constexpr double EARTH_RADIUS_KM = 6371.0;
 
@@ -25,6 +26,7 @@ struct VORStation {
   std::string north;
   std::string range;
   std::string kmm;
+  double distance;
 };
 
 // Convert degrees to radians
@@ -107,22 +109,23 @@ int main(int argc, char* argv[]) {
   auto stations = readCSV(filename);
 
   std::vector<VORStation> nearby;
-  for (const auto& station : stations) {
+  for (auto station : stations) {
     double dist = haversine(target_lat, target_lon, station.lat, station.lon);
     if (dist <= range_km) {
+      station.distance = dist;
       nearby.push_back(station);
     }
   }
 
-  std::cout << "Stations within " << range_km << " km:\n";
-  std::cout << "Count: " << nearby.size() << "\n\n";
+  std::sort(nearby.begin(), nearby.end(), [](const VORStation& a, const VORStation& b) {
+    return a.distance < b.distance;
+  });
+
   for (const auto& s : nearby) {
-    std::cout << "Name: " << s.name
-          << ", ID: " << s.id
-          << ", Lat: " << s.lat
-          << ", Lon: " << s.lon
-          << ", Freq: " << s.freq
-          << ", Decl: " << s.decl << "\n";
+    std::cout << "<" << s.id
+          << " " << s.freq
+          << "> dist:" << s.distance
+          << "\n";
   }
 
   return 0;
