@@ -43,6 +43,7 @@ rtlsdr_dev_t *dev = nullptr;
 firfilt_rrrf filter;
 
 int squelch_threshold = 20;  // Default squelch threshold (1-100)
+std:string station_id = "";
 
 std::map<std::string, char> morseMap = {
     {".-", 'A'}, {"-...", 'B'}, {"-.-.", 'C'}, {"-..", 'D'},
@@ -156,61 +157,6 @@ public:
     }
 };
 
-
-void find_records_by_column_value(const std::string &filename, const std::string &column_name, const std::string &search_value) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return;
-    }
-
-    std::string line;
-    std::vector<std::string> headers;
-    int target_column = -1;
-
-    // Read the first row to get column names
-    if (std::getline(file, line)) {
-		std::stringstream ss;
-		ss.str(line);
-        std::string column;
-        int index = 0;
-
-        while (std::getline(ss, column, ',')) {
-            headers.push_back(column);
-            if (column == column_name) {
-                target_column = index;
-            }
-            index++;
-        }
-    }
-
-    if (target_column == -1) {
-        std::cerr << "Column '" << column_name << "' not found in file." << std::endl;
-        return;
-    }
-
-    // Read and process the data rows
-    while (std::getline(file, line)) {
-		std::stringstream ss;
-		ss.str(line);
-        std::string field;
-        std::vector<std::string> fields;
-        int col_index = 0;
-
-        while (std::getline(ss, field, ',')) {
-            fields.push_back(field);
-            col_index++;
-        }
-
-        // Ensure we don't access out of bounds
-		if (target_column < static_cast<int>(fields.size()) && fields[target_column] == search_value) {
-            std::cout << "Matching Record: " << line << std::endl;
-        }
-    }
-
-    file.close();
-};
-
 // Main class for tone detection
 class ToneDetector {
     GoertzelDetector goertzel_low;
@@ -289,15 +235,19 @@ public:
                 idCode[idInx++] = morseMap[morse];
                 idCode[idInx] = 0;
                 idInx = 0;
-                std::cout << "calling find_records... with " << idCode << std::endl;
-                find_records_by_column_value("VOR.CSV", "id", idCode);
+                std::cout << "Decoded ID: " << idCode << std::endl;
+                if (station_id == idCode) {
+                    std::cout << "Station ID matched: " << station_id << std::endl;
+                } else {
+                    std::cout << "Station ID did not match." << std::endl;
+                }
                 morse.clear();
 
             } else if (silence_duration > CHAR_GAP) {
                 if (morseMap.count(morse)) {
-					std::cout << morseMap[morse] << std::flush;
-					idCode[idInx++] = morseMap[morse];
-				}
+                    std::cout << morseMap[morse] << std::flush;
+                    idCode[idInx++] = morseMap[morse];
+                }
                 morse.clear();
             }
         }
@@ -375,6 +325,12 @@ int main(int argc, char **argv) {
         } else {
             std::cerr << "Invalid squelch value (must be 1-100), using default: " << squelch_threshold << "\n";
         }
+    }
+
+    // Parse station_id argument
+    if (argc > 3) {
+        station_id = argv[3];
+        std::cout << "Station ID argument: " << station_id << std::endl;
     }
 
     if (rtlsdr_open(&dev, 0) < 0) {
