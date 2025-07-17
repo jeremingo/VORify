@@ -43,7 +43,7 @@ rtlsdr_dev_t *dev = nullptr;
 firfilt_rrrf filter;
 
 int squelch_threshold = 20;  // Default squelch threshold (1-100)
-std:string station_id = "";
+std::string station_id = "";
 
 std::map<std::string, char> morseMap = {
     {".-", 'A'}, {"-...", 'B'}, {"-.-.", 'C'}, {"-..", 'D'},
