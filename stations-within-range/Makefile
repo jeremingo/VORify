@@ -2,7 +2,7 @@
 CC = g++
 
 # Compiler flags
-CFLAGS = -Ofast -W -I /usr/local/include/librtlsdr
+CFLAGS = -Ofast -W
 
 # Include directories (if any)
 INCLUDES =
