@@ -122,10 +122,7 @@ int main(int argc, char* argv[]) {
   });
 
   for (const auto& s : nearby) {
-    std::cout << "<" << s.id
-          << " " << s.freq
-          << "> dist:" << s.distance
-          << "\n";
+    std::cout << s.id << " " << s.freq << " " << s.distance << "\n";
   }
 
   return 0;
