@@ -12,7 +12,18 @@ std::string generateRMC(double lat, double lon);
 std::vector<Entry> getStationsWithinRange(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
 
-std::optional<Location> runCommandAndGetOutput(const std::string& cmd) {
+std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
+    std::string cmd = "../intersection/intersection ";
+    for (const auto& entry : entries) {
+        if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
+            cmd += entry.location.lat + "," + entry.location.lon + "," + std::to_string(entry.bearing->value) + " ";
+        }
+    }
+    return cmd;
+}
+
+std::optional<Location> runCommandAndGetOutput(const std::vector<Entry>& entries) {
+  std::string cmd = buildIntersectionCommand(entries);
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
         std::cerr << "Failed to run command: " << cmd << '\n';
@@ -48,16 +59,6 @@ FILE* startBluetoothServer() {
         return nullptr;
     }
     return pipe;
-}
-
-std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
-    std::string cmd = "../intersection/intersection ";
-    for (const auto& entry : entries) {
-        if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
-            cmd += entry.location.lat + "," + entry.location.lon + "," + std::to_string(entry.bearing->value) + " ";
-        }
-    }
-    return cmd;
 }
 
 void sendToBluetooth(FILE* pipe, const std::string& data) {
@@ -114,8 +115,7 @@ int main() {
 
         if (count >= 2) {
           std::cout << "intersecting " << count << std::endl;
-          std::string intersectionCmd = buildIntersectionCommand(entries);
-          std::optional<Location> location = runCommandAndGetOutput(intersectionCmd);
+          std::optional<Location> location = runCommandAndGetOutput(entries);
           if (location) {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";
