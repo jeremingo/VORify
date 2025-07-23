@@ -11,7 +11,7 @@ INCLUDES =
 LIBS =
 
 # Source files (add .cpp if needed)
-SRCS = main.cpp extract_with_popen.cpp
+SRCS = main.cpp extract_with_popen.cpp generate_rmc.cpp
 
 # Object files (derived from source files)
 OBJS = $(SRCS:.cpp=.o)
