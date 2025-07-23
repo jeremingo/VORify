@@ -14,7 +14,9 @@
 #include <cmath>
 #include <ctime>
 
-std::string generateRMC(double lat, double lon, double speedKnots, double courseDeg) {
+std::string generateRMC(double lat, double lon) {
+    double speedKnots = 0.0;
+    double courseDeg = 0.0;
     std::ostringstream sentence;
 
     // Time and date
@@ -225,7 +227,7 @@ int main() {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";
             std::cout << out.str();
-            sendToBluetooth(bluetoothPipe, generateRMC(std::stod(location->lat), std::stod(location->lon), 5.5, 75.0));
+            sendToBluetooth(bluetoothPipe, generateRMC(std::stod(location->lat), std::stod(location->lon)));
           }
         }
     }
