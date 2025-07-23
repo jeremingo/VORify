@@ -88,7 +88,7 @@ std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
     std::string cmd = "../intersection/intersection ";
     for (const auto& entry : entries) {
         if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
-            cmd += entry.lat + "," + entry.lon + "," + std::to_string(entry.bearing->value) + " ";
+            cmd += entry.location.lat + "," + entry.location.lon + "," + std::to_string(entry.bearing->value) + " ";
         }
     }
     return cmd;

@@ -8,11 +8,15 @@ struct BearingInfo {
     std::chrono::steady_clock::time_point timestamp;
 };
 
+struct Location {
+  std::string lat;
+  std::string lon;
+};
+
 struct Entry {
     std::string id;
     double frequency;
-    std::string lat;
-    std::string lon;
+    Location location;
     bool is_identified = true;
     std::optional<BearingInfo> bearing;
 };
