@@ -88,6 +88,7 @@ void vor(float S)
 		double avg=fmod(180.0/M_PI*sum/n,360.0);
 		if(avg<0) avg+=360;
 		printf("%5.1f\n",avg);
+    fflush(stdout);
 		n=0;sum=0;
 	}
 }	

@@ -2,3 +2,9 @@
 
 bearing-calculator/vorify
 bluetooth-server/bluetooth-server
+identify-station/identify-station
+main/vorify
+stations-within-range/stations-within-range
+wrap-bearing-calculator/wrap-bearing-calculator
+wrap-identify-station/wrap-identify-station
+intersection/intersection
