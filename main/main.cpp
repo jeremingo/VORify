@@ -10,7 +10,6 @@
 
 std::vector<Entry> runExtractorWithPopen(const std::string& cmd);
 std::optional<double> runExecutableAndGetDouble(double frequency);
-std::string runCommandAndGetOutput(const std::string& cmd);
 
 std::optional<double> runExecutableAndGetDouble(double frequency) {
     std::string cmd = "../wrap-bearing-calculator/wrap-bearing-calculator ../bearing-calculator/vorify " + std::to_string(frequency);
@@ -49,11 +48,11 @@ std::optional<double> runExecutableAndGetDouble(double frequency) {
     }
 }
 
-std::string runCommandAndGetOutput(const std::string& cmd) {
+std::optional<Location> runCommandAndGetOutput(const std::string& cmd) {
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
         std::cerr << "Failed to run command: " << cmd << '\n';
-        return "";
+        return std::nullopt;
     }
 
     char buffer[128];
@@ -65,9 +64,17 @@ std::string runCommandAndGetOutput(const std::string& cmd) {
     int status = pclose(pipe);
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
         std::cerr << "Command exited with code " << WEXITSTATUS(status) << '\n';
+        return std::nullopt;
     }
 
-    return result;
+    std::istringstream iss(result);
+    double lat, lon;
+    if (iss >> lat >> lon) {
+        return Location{std::to_string(lat), std::to_string(lon)};
+    } else {
+        std::cerr << "Failed to parse intersection output: " << result << '\n';
+        return std::nullopt;
+    }
 }
 
 FILE* startBluetoothServer() {
@@ -155,10 +162,14 @@ int main() {
 
         if (count >= 2) {
           std::cout << "intersecting " << count << std::endl;
-            std::string intersectionCmd = buildIntersectionCommand(entries);
-            std::string result = runCommandAndGetOutput(intersectionCmd);
-            std::cout << result << std::endl;
-            sendToBluetooth(bluetoothPipe, result);
+          std::string intersectionCmd = buildIntersectionCommand(entries);
+          std::optional<Location> location = runCommandAndGetOutput(intersectionCmd);
+          if (location) {
+            std::ostringstream out;
+            out << location->lat << " " << location->lon << "\n";
+            std::cout << out.str();
+            sendToBluetooth(bluetoothPipe, out.str());
+          }
         }
     }
 
