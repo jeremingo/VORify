@@ -237,9 +237,9 @@ public:
                 idInx = 0;
                 std::cout << "Decoded ID: " << idCode << std::endl;
                 if (station_id == idCode) {
-                    std::cout << "Station ID matched: " << station_id << std::endl;
+                    std::cout << "Station ID matched" << std::endl << std::flush;
                 } else {
-                    std::cout << "Station ID did not match." << std::endl;
+                    std::cout << "Station ID did not match" << std::endl << std::flush;
                 }
                 morse.clear();
 
@@ -317,20 +317,20 @@ int main(int argc, char **argv) {
         freq = static_cast<int>(atof(argv[1]) * 1e6);
     }
 
-    // Parse squelch threshold argument
+    // Parse station_id argument
     if (argc > 2) {
-        int threshold = atoi(argv[2]);
+        station_id = argv[2];
+        std::cout << "Station ID argument: " << station_id << std::endl;
+    }
+
+    // Parse squelch threshold argument
+    if (argc > 3) {
+        int threshold = atoi(argv[3]);
         if (threshold >= 1 && threshold <= 100) {
             squelch_threshold = threshold;
         } else {
             std::cerr << "Invalid squelch value (must be 1-100), using default: " << squelch_threshold << "\n";
         }
-    }
-
-    // Parse station_id argument
-    if (argc > 3) {
-        station_id = argv[3];
-        std::cout << "Station ID argument: " << station_id << std::endl;
     }
 
     if (rtlsdr_open(&dev, 0) < 0) {
