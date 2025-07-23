@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cstdio>
 
-std::vector<Entry> runExtractorWithPopen(const double lat, const double lon, const int range) {
+std::vector<Entry> getStationsWithinRange(const double lat, const double lon, const int range) {
   std::string cmd = "../stations-within-range/stations-within-range " + std::to_string(lat) + " " + std::to_string(lon) + " " + std::to_string(range) + " ../VOR.CSV" ;
   std::vector<Entry> entries;
 
