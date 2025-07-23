@@ -34,10 +34,22 @@ std::mutex entryMutex;
 
 void startJSONOutput(std::vector<Entry>& entries, bool& running) {
   std::thread([&entries, &running]() {
-    while (running) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      std::cout << entriesToJson(entries) << std::endl;
+    std::string command = "python3 ../ui/ui.py";
+    FILE* python = popen(command.c_str(), "w");
+    if (!python) {
+      std::cerr << "Failed to start Python script" << std::endl;
+      return;
     }
+
+    while (running) {
+      std::cout << "printing";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::string json = entriesToJson(entries);
+      fprintf(python, "%s\n", json.c_str());
+      fflush(python);
+    }
+
+    pclose(python);
   }).detach();
 }
 

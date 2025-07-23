@@ -1,95 +1,99 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
-import csv
-import os
-
-def load_vor_data_from_csv(filename):
-  data = []
-  try:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(BASE_DIR, filename)
-    with open(filename, newline='', encoding='utf-8') as csvfile:
-      reader = csv.DictReader(csvfile)
-      for row in reader:
-        # Extract required columns and handle missing values
-        data.append((
-          row.get("id", ""),
-          row.get("name", ""),
-          row.get("freq", ""),
-          row.get("lat", ""),
-          row.get("lon", "")
-        ))
-  except Exception as e:
-    messagebox.showerror("Error", f"Failed to load VOR data: {e}")
-  return data
+import sys
+import json
+import threading
 
 class VORApp:
-  def __init__(self, root, data):
-    self.root = root
-    self.vor_data = data
-    self.origin_vor = None
+    def __init__(self, root):
+        self.root = root
+        self.vor_data = []
+        self.origin_vor = None
 
-    self.root.title("VOR Stations Table")
-    self.root.geometry("700x350")
+        self.root.title("VOR Station Entries Table")
+        self.root.geometry("750x400")
 
-    self.create_widgets()
+        self.create_widgets()
 
-  def create_widgets(self):
-    # Button to change origin
-    self.change_button = ttk.Button(self.root, text="Change Origin VOR", command=self.change_origin)
-    self.change_button.pack(pady=5)
+        # Start background thread to listen for stdin
+        threading.Thread(target=self.listen_for_input, daemon=True).start()
 
-    # Frame for the table and scrollbars
-    frame = ttk.Frame(self.root)
-    frame.pack(fill=tk.BOTH, expand=True)
+    def create_widgets(self):
+        self.change_button = ttk.Button(self.root, text="Highlight by ID", command=self.change_origin)
+        self.change_button.pack(pady=5)
 
-    # Scrollbars
-    vsb = ttk.Scrollbar(frame, orient="vertical")
-    hsb = ttk.Scrollbar(frame, orient="horizontal")
+        frame = ttk.Frame(self.root)
+        frame.pack(fill=tk.BOTH, expand=True)
 
-    # Treeview (table)
-    columns = ("Ident", "Name", "Frequency", "Latitude", "Longitude")
-    self.tree = ttk.Treeview(frame, columns=columns, show="headings",
-                 yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        vsb = ttk.Scrollbar(frame, orient="vertical")
+        hsb = ttk.Scrollbar(frame, orient="horizontal")
 
-    for col in columns:
-      self.tree.heading(col, text=col)
-      self.tree.column(col, anchor="center", width=100)
+        columns = ("Ident", "Frequency", "Latitude", "Longitude", "Bearing")
+        self.tree = ttk.Treeview(frame, columns=columns, show="headings",
+                                 yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
-    vsb.config(command=self.tree.yview)
-    hsb.config(command=self.tree.xview)
-    vsb.pack(side="right", fill="y")
-    hsb.pack(side="bottom", fill="x")
-    self.tree.pack(fill=tk.BOTH, expand=True)
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, anchor="center", width=120)
 
-    # Insert initial data
-    self.populate_table()
+        vsb.config(command=self.tree.yview)
+        hsb.config(command=self.tree.xview)
+        vsb.pack(side="right", fill="y")
+        hsb.pack(side="bottom", fill="x")
+        self.tree.pack(fill=tk.BOTH, expand=True)
 
-  def populate_table(self):
-    self.tree.delete(*self.tree.get_children())
-    for row in self.vor_data:
-      tag = "origin" if self.origin_vor and row[0] == self.origin_vor else ""
-      self.tree.insert("", tk.END, values=row, tags=(tag,))
-    self.tree.tag_configure("origin", background="#d1e7dd")  # Light green
+    def populate_table(self):
+        self.tree.delete(*self.tree.get_children())
+        for row in self.vor_data:
+            tag = "origin" if self.origin_vor and row[0] == self.origin_vor else ""
+            self.tree.insert("", tk.END, values=row, tags=(tag,))
+        self.tree.tag_configure("origin", background="#d1e7dd")  # Light green
 
-  def change_origin(self):
-    # Prompt user for VOR Ident or Name
-    search = simpledialog.askstring("Search VOR", "Enter VOR Ident or Name:")
-    if search:
-      found = None
-      for vor in self.vor_data:
-        if search.lower() in vor[0].lower() or search.lower() in vor[1].lower():
-          found = vor
-          break
-      if found:
-        self.origin_vor = found[0]
-        self.populate_table()
-      else:
-        messagebox.showinfo("Not Found", f"No VOR station found for: {search}")
+    def update_data(self, json_data):
+        try:
+            parsed = json.loads(json_data)
+            self.vor_data = [
+                (
+                    item.get("id", ""),
+                    item.get("frequency", ""),
+                    item.get("location", {}).get("lat", ""),
+                    item.get("location", {}).get("lon", ""),
+                    item.get("bearing", {}).get("value", "") if item.get("bearing") else ""
+                )
+                for item in parsed
+            ]
+            self.root.after(0, self.populate_table)
+        except Exception as e:
+            print(f"[Error parsing JSON]: {e}", file=sys.stderr)
+
+    def listen_for_input(self):
+        buffer = ""
+        while True:
+            line = sys.stdin.readline()
+            if not line:
+                break  # EOF
+            buffer += line
+            try:
+                # Try parsing JSON (must be full object)
+                json.loads(buffer)
+                self.update_data(buffer)
+                buffer = ""
+            except json.JSONDecodeError:
+                continue  # Wait for more lines to complete the JSON
+
+    def change_origin(self):
+        search = simpledialog.askstring("Highlight Entry", "Enter Station ID to highlight:")
+        if search:
+            found = next((vor for vor in self.vor_data if search.lower() in vor[0].lower()), None)
+            if found:
+                self.origin_vor = found[0]
+                self.populate_table()
+            else:
+                messagebox.showinfo("Not Found", f"No station found for: {search}")
 
 # Run the app
 if __name__ == "__main__":
-  vor_data = load_vor_data_from_csv("../VOR.CSV")
-  root = tk.Tk()
-  app = VORApp(root, vor_data)
-  root.mainloop()
+    root = tk.Tk()
+    app = VORApp(root)
+    root.mainloop()
+
