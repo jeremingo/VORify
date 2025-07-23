@@ -4,6 +4,9 @@
 #include <optional>
 #include <sstream>
 #include <cstdio>
+#include <thread>
+#include <mutex>
+#include <chrono>
 
 std::vector<Entry> runExtractorWithPopen(const std::string& cmd);
 std::optional<double> runExecutableAndGetDouble(double frequency);
@@ -35,7 +38,8 @@ std::optional<double> runExecutableAndGetDouble(double frequency) {
         std::cerr << "Command terminated by signal " << WTERMSIG(status) << '\n';
         return std::nullopt;
     }
-      std::istringstream iss(result);
+
+    std::istringstream iss(result);
     double value;
     if (iss >> value) {
         return value;
@@ -46,27 +50,26 @@ std::optional<double> runExecutableAndGetDouble(double frequency) {
 }
 
 std::string runCommandAndGetOutput(const std::string& cmd) {
-  FILE* pipe = popen(cmd.c_str(), "r");
-  if (!pipe) {
-    std::cerr << "Failed to run command: " << cmd << '\n';
-    return "";
-  }
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) {
+        std::cerr << "Failed to run command: " << cmd << '\n';
+        return "";
+    }
 
-  char buffer[128];
-  std::string result;
-  while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-    result += buffer;
-  }
+    char buffer[128];
+    std::string result;
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
 
-  int status = pclose(pipe);
-  if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-    std::cerr << "Command exited with code " << WEXITSTATUS(status) << '\n';
-  }
+    int status = pclose(pipe);
+    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+        std::cerr << "Command exited with code " << WEXITSTATUS(status) << '\n';
+    }
 
-  return result;
+    return result;
 }
 
-// 1. Start Bluetooth server and return writable pipe
 FILE* startBluetoothServer() {
     FILE* pipe = popen("../bluetooth-server/bluetooth-server", "w");
     if (!pipe) {
@@ -76,65 +79,88 @@ FILE* startBluetoothServer() {
     return pipe;
 }
 
-// 2. Extract entries and compute bearings
 std::vector<Entry> processEntries() {
     std::string extractCmd = "../stations-within-range/stations-within-range 35 128 400 ../VOR.CSV";
-    std::vector<Entry> entries = runExtractorWithPopen(extractCmd);
-
-    for (auto& entry : entries) {
-        if (entry.is_identified) {
-            std::optional<double> bearing = runExecutableAndGetDouble(entry.frequency);
-            if (bearing) {
-                entry.bearing = bearing;
-            }
-        }
-    }
-
-    return entries;
+    return runExtractorWithPopen(extractCmd);
 }
 
-// 3. Build intersection command from valid entries
 std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
     std::string cmd = "../intersection/intersection ";
     for (const auto& entry : entries) {
-        if (entry.is_identified && entry.bearing.has_value()) {
-            cmd += entry.lat + "," + entry.lon + "," + std::to_string(entry.bearing.value()) + " ";
+        if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
+            cmd += entry.lat + "," + entry.lon + "," + std::to_string(entry.bearing->value) + " ";
         }
     }
     return cmd;
 }
 
-// 4. Print entries to stdout
 void printEntries(const std::vector<Entry>& entries) {
     for (const auto& e : entries) {
         std::cout << "ID: " << e.id << " Freq: " << e.frequency
-                  << " Bearing: " << e.bearing.value_or(0) << "\n";
+                  << " Bearing: " << (e.bearing ? std::to_string(e.bearing->value) : "N/A") << "\n";
     }
 }
 
-// 5. Send result to bluetooth server
 void sendToBluetooth(FILE* pipe, const std::string& data) {
     if (!pipe) return;
     fputs(data.c_str(), pipe);
     fflush(pipe);
-    pclose(pipe);
+    // Pipe stays open for reuse
 }
 
-// 6. Main
+std::mutex entryMutex;
+
+void startBearingUpdater(std::vector<Entry>& entries, bool& running) {
+    std::thread([&entries, &running]() {
+        while (running) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            auto now = std::chrono::steady_clock::now();
+
+            for (auto& entry : entries) {
+                if (entry.is_identified &&
+                    (!entry.bearing.has_value() ||
+                     std::chrono::duration_cast<std::chrono::seconds>(now - entry.bearing->timestamp).count() >= 8)) {
+                  std::cout << "getting bearing " << entry.id << std::endl;
+                    std::optional<double> bearing = runExecutableAndGetDouble(entry.frequency);
+
+                    if (bearing) {
+                        std::lock_guard<std::mutex> lock(entryMutex);
+                        entry.bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
+                    }
+                }
+            }
+        }
+    }).detach();
+}
+
 int main() {
     FILE* bluetoothPipe = startBluetoothServer();
     if (!bluetoothPipe) return 1;
 
     std::vector<Entry> entries = processEntries();
+    bool running = true;
 
-    std::string intersectionCmd = buildIntersectionCommand(entries);
+    startBearingUpdater(entries, running);
 
-    printEntries(entries);
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::seconds(4));
 
-    std::string result = runCommandAndGetOutput(intersectionCmd);
-    std::cout << result;
+        std::lock_guard<std::mutex> lock(entryMutex);
 
-    sendToBluetooth(bluetoothPipe, result);
+        int count = 0;
+        for (const auto& entry : entries) {
+            if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - entry.bearing->timestamp).count() <= 8)
+                ++count;
+        }
+
+        if (count >= 2) {
+          std::cout << "intersecting " << count << std::endl;
+            std::string intersectionCmd = buildIntersectionCommand(entries);
+            std::string result = runCommandAndGetOutput(intersectionCmd);
+            std::cout << result << std::endl;
+            sendToBluetooth(bluetoothPipe, result);
+        }
+    }
 
     return 0;
 }
