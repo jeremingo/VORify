@@ -60,13 +60,6 @@ std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
     return cmd;
 }
 
-void printEntries(const std::vector<Entry>& entries) {
-    for (const auto& e : entries) {
-        std::cout << "ID: " << e.id << " Freq: " << e.frequency
-                  << " Bearing: " << (e.bearing ? std::to_string(e.bearing->value) : "N/A") << "\n";
-    }
-}
-
 void sendToBluetooth(FILE* pipe, const std::string& data) {
     if (!pipe) return;
     fputs(data.c_str(), pipe);
