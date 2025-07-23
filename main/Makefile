@@ -11,7 +11,7 @@ INCLUDES =
 LIBS =
 
 # Source files (add .cpp if needed)
-SRCS = main.cpp stations_within_range.cpp generate_rmc.cpp calculate_bearing.cpp intersection.cpp
+SRCS = main.cpp stations_within_range.cpp generate_rmc.cpp calculate_bearing.cpp intersection.cpp stations_to_json.cpp
 
 # Object files (derived from source files)
 OBJS = $(SRCS:.cpp=.o)

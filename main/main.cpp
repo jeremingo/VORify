@@ -12,6 +12,7 @@ std::string generateRMC(double lat, double lon);
 std::vector<Entry> getStationsWithinRange(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
 std::optional<Location> intersection(const std::vector<Entry>& entries);
+std::string entriesToJson(const std::vector<Entry>& entries);
 
 FILE* startBluetoothServer() {
     FILE* pipe = popen("../bluetooth-server/bluetooth-server", "w");
@@ -30,6 +31,28 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 }
 
 std::mutex entryMutex;
+
+void startJSONOutput(std::vector<Entry>& entries, bool& running) {
+  std::thread([&entries, &running]() {
+    std::string command = "python3 ../ui/ui.py";
+    FILE* python = popen(command.c_str(), "w");
+    if (!python) {
+      std::cerr << "Failed to start Python script" << std::endl;
+      return;
+    }
+
+    while (running) {
+      std::cout << "printing";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::string json = entriesToJson(entries);
+      fprintf(python, "%s\n", json.c_str());
+      fflush(python);
+    }
+
+    pclose(python);
+  }).detach();
+}
+
 
 void startBearingUpdater(std::vector<Entry>& entries, bool& running) {
     std::thread([&entries, &running]() {
@@ -61,6 +84,7 @@ int main() {
     std::vector<Entry> entries = getStationsWithinRange(35.0, 128.0, 400);
     bool running = true;
 
+    startJSONOutput(entries, running);
     startBearingUpdater(entries, running);
 
     while (running) {
