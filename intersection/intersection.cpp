@@ -156,9 +156,9 @@ int main(int argc, char* argv[]) {
     LatLon result = averageIntersections(stations);
 
     if (result.lat == 0 && result.lon == 0) {
-        std::cout << "No valid intersection found.\n";
+        std::cerr << "No valid intersection found.\n";
     } else {
-        std::cout << "Estimated Position: Lat = " << result.lat << ", Lon = " << result.lon << "\n";
+        std::cout << result.lat << " " << result.lon << "\n";
     }
 
     return 0;

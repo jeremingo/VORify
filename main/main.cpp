@@ -8,9 +8,65 @@
 #include <mutex>
 #include <chrono>
 
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <cmath>
+#include <ctime>
+
+std::string generateRMC(double lat, double lon, double speedKnots, double courseDeg) {
+    std::ostringstream sentence;
+
+    // Time and date
+    std::time_t now = std::time(nullptr);
+    std::tm *utc = std::gmtime(&now);
+
+    // Latitude
+    char latHemi = (lat >= 0) ? 'N' : 'S';
+    lat = std::fabs(lat);
+    int latDeg = static_cast<int>(lat);
+    double latMin = (lat - latDeg) * 60.0;
+
+    // Longitude
+    char lonHemi = (lon >= 0) ? 'E' : 'W';
+    lon = std::fabs(lon);
+    int lonDeg = static_cast<int>(lon);
+    double lonMin = (lon - lonDeg) * 60.0;
+
+    // Build body of the sentence
+    std::ostringstream body;
+    body << "GPRMC,"
+         << std::setfill('0') << std::setw(2) << utc->tm_hour
+         << std::setw(2) << utc->tm_min
+         << std::setw(2) << utc->tm_sec << ",A,"
+         << std::setw(2) << latDeg << std::fixed << std::setprecision(4)
+         << std::setw(7) << latMin << "," << latHemi << ","
+         << std::setw(3) << lonDeg << std::fixed << std::setprecision(4)
+         << std::setw(7) << lonMin << "," << lonHemi << ","
+         << std::fixed << std::setprecision(1) << speedKnots << ","
+         << courseDeg << ","
+         << std::setfill('0') << std::setw(2) << utc->tm_mday
+         << std::setw(2) << (utc->tm_mon + 1)
+         << std::setw(2) << (utc->tm_year % 100) << ",,";
+
+    std::string bodyStr = body.str();
+
+    // Calculate checksum
+    unsigned char checksum = 0;
+    for (char ch : bodyStr) {
+        checksum ^= ch;
+    }
+
+    // Assemble final sentence
+    sentence << "$" << bodyStr << "*" << std::uppercase << std::hex
+             << std::setw(2) << std::setfill('0') << static_cast<int>(checksum) << "\r\n";
+
+    return sentence.str();
+}
+
+
 std::vector<Entry> runExtractorWithPopen(const std::string& cmd);
 std::optional<double> runExecutableAndGetDouble(double frequency);
-std::string runCommandAndGetOutput(const std::string& cmd);
 
 std::optional<double> runExecutableAndGetDouble(double frequency) {
     std::string cmd = "../wrap-bearing-calculator/wrap-bearing-calculator ../bearing-calculator/vorify " + std::to_string(frequency);
@@ -49,11 +105,11 @@ std::optional<double> runExecutableAndGetDouble(double frequency) {
     }
 }
 
-std::string runCommandAndGetOutput(const std::string& cmd) {
+std::optional<Location> runCommandAndGetOutput(const std::string& cmd) {
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
         std::cerr << "Failed to run command: " << cmd << '\n';
-        return "";
+        return std::nullopt;
     }
 
     char buffer[128];
@@ -65,9 +121,17 @@ std::string runCommandAndGetOutput(const std::string& cmd) {
     int status = pclose(pipe);
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
         std::cerr << "Command exited with code " << WEXITSTATUS(status) << '\n';
+        return std::nullopt;
     }
 
-    return result;
+    std::istringstream iss(result);
+    double lat, lon;
+    if (iss >> lat >> lon) {
+        return Location{std::to_string(lat), std::to_string(lon)};
+    } else {
+        std::cerr << "Failed to parse intersection output: " << result << '\n';
+        return std::nullopt;
+    }
 }
 
 FILE* startBluetoothServer() {
@@ -88,7 +152,7 @@ std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
     std::string cmd = "../intersection/intersection ";
     for (const auto& entry : entries) {
         if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
-            cmd += entry.lat + "," + entry.lon + "," + std::to_string(entry.bearing->value) + " ";
+            cmd += entry.location.lat + "," + entry.location.lon + "," + std::to_string(entry.bearing->value) + " ";
         }
     }
     return cmd;
@@ -155,10 +219,14 @@ int main() {
 
         if (count >= 2) {
           std::cout << "intersecting " << count << std::endl;
-            std::string intersectionCmd = buildIntersectionCommand(entries);
-            std::string result = runCommandAndGetOutput(intersectionCmd);
-            std::cout << result << std::endl;
-            sendToBluetooth(bluetoothPipe, result);
+          std::string intersectionCmd = buildIntersectionCommand(entries);
+          std::optional<Location> location = runCommandAndGetOutput(intersectionCmd);
+          if (location) {
+            std::ostringstream out;
+            out << location->lat << " " << location->lon << "\n";
+            std::cout << out.str();
+            sendToBluetooth(bluetoothPipe, generateRMC(std::stod(location->lat), std::stod(location->lon), 5.5, 75.0));
+          }
         }
     }
 
