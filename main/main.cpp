@@ -44,6 +44,27 @@ std::optional<double> runExecutableAndGetDouble(double frequency) {
     }
 }
 
+std::string runCommandAndGetOutput(const std::string& cmd) {
+  FILE* pipe = popen(cmd.c_str(), "r");
+  if (!pipe) {
+    std::cerr << "Failed to run command: " << cmd << '\n';
+    return "";
+  }
+
+  char buffer[128];
+  std::string result;
+  while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+    result += buffer;
+  }
+
+  int status = pclose(pipe);
+  if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+    std::cerr << "Command exited with code " << WEXITSTATUS(status) << '\n';
+  }
+
+  return result;
+}
+
 
 int main() {
     std::string extractCmd = "../stations-within-range/stations-within-range 35 128 400 ../VOR.CSV";
@@ -59,8 +80,18 @@ int main() {
         }
     }
 
+    std::string intersectionCmd = "../intersection/intersection ";
+
+    for (auto& entry : entries) {
+      if (entry.is_identified && entry.bearing.has_value()) {
+        intersectionCmd += entry.lat + "," + entry.lon + "," + std::to_string(entry.bearing.value()) + " ";
+      }
+    }
+
     for (const auto& e : entries) {
         std::cout << "ID: " << e.id << " Freq: " << e.frequency << " Bearing: " << e.bearing.value_or(0) << "\n";
     }
+
+    std::cout << runCommandAndGetOutput(intersectionCmd);
 }
 

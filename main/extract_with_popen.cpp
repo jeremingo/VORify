@@ -18,7 +18,7 @@ std::vector<Entry> runExtractorWithPopen(const std::string& cmd) {
     while (fgets(buffer, sizeof(buffer), pipe)) {
         std::istringstream iss(buffer);
         Entry e;
-        if (iss >> e.id >> e.frequency) {
+        if (iss >> e.id >> e.lat >> e.lon >> e.frequency) {
             entries.push_back(e);
         } else {
             std::cerr << "Skipping malformed line: " << buffer;

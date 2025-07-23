@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -122,7 +123,7 @@ int main(int argc, char* argv[]) {
   });
 
   for (const auto& s : nearby) {
-    std::cout << s.id << " " << s.freq << " " << s.distance << "\n";
+    std::cout << s.id << " " << std::setprecision(13) << s.lat << " " << s.lon << " " << s.freq << " " << s.distance << "\n";
   }
 
   return 0;
