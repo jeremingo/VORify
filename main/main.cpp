@@ -9,7 +9,7 @@
 #include <chrono>
 
 std::string generateRMC(double lat, double lon);
-std::vector<Entry> runExtractorWithPopen(const std::string& cmd);
+std::vector<Entry> runExtractorWithPopen(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
 
 std::optional<Location> runCommandAndGetOutput(const std::string& cmd) {
@@ -48,11 +48,6 @@ FILE* startBluetoothServer() {
         return nullptr;
     }
     return pipe;
-}
-
-std::vector<Entry> processEntries() {
-    std::string extractCmd = "../stations-within-range/stations-within-range 35 128 400 ../VOR.CSV";
-    return runExtractorWithPopen(extractCmd);
 }
 
 std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
@@ -108,7 +103,7 @@ int main() {
     FILE* bluetoothPipe = startBluetoothServer();
     if (!bluetoothPipe) return 1;
 
-    std::vector<Entry> entries = processEntries();
+    std::vector<Entry> entries = runExtractorWithPopen(35.0, 128.0, 400);
     bool running = true;
 
     startBearingUpdater(entries, running);
