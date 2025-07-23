@@ -11,7 +11,7 @@
 std::string generateRMC(double lat, double lon);
 std::vector<Entry> getStationsWithinRange(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
-std::optional<Location> runCommandAndGetOutput(const std::vector<Entry>& entries);
+std::optional<Location> intersection(const std::vector<Entry>& entries);
 
 FILE* startBluetoothServer() {
     FILE* pipe = popen("../bluetooth-server/bluetooth-server", "w");
@@ -76,7 +76,7 @@ int main() {
 
         if (count >= 2) {
           std::cout << "intersecting " << count << std::endl;
-          std::optional<Location> location = runCommandAndGetOutput(entries);
+          std::optional<Location> location = intersection(entries);
           if (location) {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";

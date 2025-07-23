@@ -18,7 +18,7 @@ std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
     return cmd;
 }
 
-std::optional<Location> runCommandAndGetOutput(const std::vector<Entry>& entries) {
+std::optional<Location> intersection(const std::vector<Entry>& entries) {
   std::string cmd = buildIntersectionCommand(entries);
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
