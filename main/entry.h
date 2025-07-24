@@ -2,6 +2,7 @@
 #include <string>
 #include <optional>
 #include <chrono>
+#include <mutex>
 
 struct BearingInfo {
     double value;
@@ -19,4 +20,5 @@ struct Entry {
     Location location;
     bool is_identified = true;
     std::optional<BearingInfo> bearing;
+  std::mutex mutex;
 };
