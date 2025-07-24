@@ -7,18 +7,20 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <memory>
 
-std::string buildIntersectionCommand(const std::vector<Entry>& entries) {
+std::string buildIntersectionCommand(const std::vector<std::shared_ptr<Entry>>& entries) {
     std::string cmd = "../intersection/intersection ";
     for (const auto& entry : entries) {
-        if (entry.is_identified && entry.bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry.bearing->timestamp).count() <= 8) {
-            cmd += entry.location.lat + "," + entry.location.lon + "," + std::to_string(entry.bearing->value) + " ";
+      std::lock_guard<std::mutex> entryLock(entry->mutex);
+        if (entry->is_identified && entry->bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()  - entry->bearing->timestamp).count() <= 8) {
+            cmd += entry->location.lat + "," + entry->location.lon + "," + std::to_string(entry->bearing->value) + " ";
         }
     }
     return cmd;
 }
 
-std::optional<Location> intersection(const std::vector<Entry>& entries) {
+std::optional<Location> intersection(const std::vector<std::shared_ptr<Entry>>& entries) {
   std::string cmd = buildIntersectionCommand(entries);
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
