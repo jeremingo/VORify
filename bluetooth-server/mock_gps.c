@@ -33,12 +33,16 @@ int main() {
         if (len > 0 && last_stdin_data[len - 1] == '\n') {
           last_stdin_data[len - 1] = '\0';
         }
+        char with_crlf[260];
+        snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", last_stdin_data);
         printf("Sending from stdin: %s\n", last_stdin_data);
-        bluetooth_send(last_stdin_data);
+        bluetooth_send(with_crlf);
       }
     } else if (last_stdin_data[0] != '\0') {
+      char with_crlf[260];
+      snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", last_stdin_data);
       printf("Resending last stdin: %s\n", last_stdin_data);
-      bluetooth_send(last_stdin_data);
+      bluetooth_send(with_crlf);
     }
   }
 

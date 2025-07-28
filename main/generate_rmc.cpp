@@ -27,19 +27,15 @@ std::string generateRMC(double lat, double lon) {
 
     // Build body of the sentence
     std::ostringstream body;
-    body << "GPRMC,"
+    body << "GPGGA,"
          << std::setfill('0') << std::setw(2) << utc->tm_hour
          << std::setw(2) << utc->tm_min
-         << std::setw(2) << utc->tm_sec << ",A,"
-         << std::setw(2) << latDeg << std::fixed << std::setprecision(4)
+         << std::setw(2) << utc->tm_sec << ".00,"
+         << std::setw(2) << latDeg << std::fixed << std::setprecision(6)
          << std::setw(7) << latMin << "," << latHemi << ","
-         << std::setw(3) << lonDeg << std::fixed << std::setprecision(4)
+         << std::setw(3) << lonDeg << std::fixed << std::setprecision(6)
          << std::setw(7) << lonMin << "," << lonHemi << ","
-         << std::fixed << std::setprecision(1) << speedKnots << ","
-         << courseDeg << ","
-         << std::setfill('0') << std::setw(2) << utc->tm_mday
-         << std::setw(2) << (utc->tm_mon + 1)
-         << std::setw(2) << (utc->tm_year % 100) << ",,";
+         << "1,10,1.0,33.6,M,19.0,M,,";
 
     std::string bodyStr = body.str();
 
@@ -51,7 +47,7 @@ std::string generateRMC(double lat, double lon) {
 
     // Assemble final sentence
     sentence << "$" << bodyStr << "*" << std::uppercase << std::hex
-             << std::setw(2) << std::setfill('0') << static_cast<int>(checksum) << "\r\n";
+             << std::setw(2) << std::setfill('0') << static_cast<int>(checksum) << "\n";
 
     return sentence.str();
 }
