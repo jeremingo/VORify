@@ -34,6 +34,7 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 }
 
 std::shared_mutex entriesMutex;
+std::mutex locationMutex;
 
 void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, bool& running) {
   std::thread([&entries, &running]() {
@@ -88,6 +89,7 @@ void startStationsUpdater(std::vector<std::shared_ptr<Entry>>& entries, std::opt
     std::thread([&entries, &location, &running]() {
         while (running) {
           std::this_thread::sleep_for(std::chrono::seconds(60));
+          std::lock_guard<std::mutex> locationLock(locationMutex);
           if (location) {
             std::cout << "UPDATING STATIONS" << std::endl;
 
@@ -99,10 +101,21 @@ void startStationsUpdater(std::vector<std::shared_ptr<Entry>>& entries, std::opt
     }).detach();
 }
 
-int main() {
-    FILE* bluetoothPipe = startBluetoothServer();
-    if (!bluetoothPipe) return 1;
+void startBluetoothServer(std::optional<Location>& location, bool& running) {
+    std::thread([&location, &running]() {
+        FILE* bluetoothPipe = startBluetoothServer();
+        if (!bluetoothPipe) return 1;
+        while (running) {
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          std::lock_guard<std::mutex> locationLock(locationMutex);
+          if (location) {
+            sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
+          }
+        }
+    }).detach();
+}
 
+int main() {
     std::vector<std::shared_ptr<Entry>> entries = getStationsWithinRange(35.0, 128.0, 400);
     std::optional<Location> location = std::nullopt;
     bool running = true;
@@ -110,6 +123,7 @@ int main() {
     startJSONOutput(entries, running);
     startBearingUpdater(entries, running);
     startStationsUpdater(entries, location, running);
+    startBluetoothServer(location, running);
 
     while (running) {
         std::this_thread::sleep_for(std::chrono::seconds(4));
@@ -125,12 +139,12 @@ int main() {
 
         if (count >= 2) {
           std::cout << "intersecting " << count << std::endl;
+          std::lock_guard<std::mutex> locationLock(locationMutex);
           location = intersection(entries);
           if (location) {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";
             std::cout << out.str();
-            sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
           }
         }
     }
