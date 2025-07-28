@@ -4,7 +4,7 @@
 #include <cmath>
 #include <ctime>
 
-std::string generateRMC(double lat, double lon) {
+std::string generateNMEA(double lat, double lon) {
     double speedKnots = 0.0;
     double courseDeg = 0.0;
     std::ostringstream sentence;
