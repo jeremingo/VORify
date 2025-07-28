@@ -10,7 +10,7 @@
 #include <chrono>
 #include <memory>
 
-std::string generateRMC(double lat, double lon);
+std::string generateNMEA(double lat, double lon);
 std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
 std::optional<Location> intersection(const std::vector<std::shared_ptr<Entry>>& entries);
@@ -130,7 +130,7 @@ int main() {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";
             std::cout << out.str();
-            sendToBluetooth(bluetoothPipe, generateRMC(std::stod(location->lat), std::stod(location->lon)));
+            sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
           }
         }
     }
