@@ -7,7 +7,6 @@
 
 int main() {
   char gps_data[256];
-  char last_stdin_data[256] = {0};
 
   // Initialize the Bluetooth server
   bluetooth_init("MockGPS");
@@ -27,25 +26,22 @@ int main() {
       break;
     } else if (retval) {
       // New data on stdin
-      if (fgets(last_stdin_data, sizeof(last_stdin_data), stdin) != NULL) {
+      if (fgets(gps_data, sizeof(gps_data), stdin) != NULL) {
         // Remove trailing newline
-        size_t len = strlen(last_stdin_data);
-        if (len > 0 && last_stdin_data[len - 1] == '\n') {
-          last_stdin_data[len - 1] = '\0';
+        size_t len = strlen(gps_data);
+        if (len > 0 && gps_data[len - 1] == '\n') {
+          gps_data[len - 1] = '\0';
         }
+        printf("Sending from stdin: %s\n", gps_data);
         char with_crlf[260];
-        snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", last_stdin_data);
-        printf("Sending from stdin: %s\n", last_stdin_data);
+        snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", gps_data);
         bluetooth_send(with_crlf);
       }
-    } else if (last_stdin_data[0] != '\0') {
-      char with_crlf[260];
-      snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", last_stdin_data);
-      printf("Resending last stdin: %s\n", last_stdin_data);
-      bluetooth_send(with_crlf);
     }
+    // else: do nothing on timeout
   }
 
   bluetooth_stop();
   return 0;
 }
+
