@@ -11,7 +11,8 @@ class VORApp:
         self.origin_vor = None
 
         self.root.title("VOR Station Entries Table")
-        self.root.geometry("750x400")
+        self.root.attributes("-fullscreen", True)
+        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
 
         self.create_widgets()
 
