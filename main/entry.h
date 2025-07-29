@@ -15,10 +15,11 @@ struct Location {
 };
 
 struct Entry {
-    std::string id;
-    double frequency;
-    Location location;
-    bool is_identified = true;
-    std::optional<BearingInfo> bearing;
+  std::string id;
+  double frequency;
+  Location location;
+  bool is_identified = true;
+  std::optional<BearingInfo> bearing;
+  std::optional<double> distance;
   std::mutex mutex;
 };
