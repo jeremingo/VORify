@@ -3,6 +3,7 @@ from tkinter import ttk, simpledialog, messagebox
 import sys
 import json
 import threading
+import tkinter.font as tkFont
 
 class VORApp:
     def __init__(self, root):
@@ -32,6 +33,10 @@ class VORApp:
         columns = ("Name", "Ident", "Frequency", "Bearing", "Distance")
         self.tree = ttk.Treeview(frame, columns=columns, show="headings",
                                  yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+        style = ttk.Style()
+        style.configure("Treeview", font=(None, 30), rowheight=50)
+        style.configure("Treeview.Heading", font=(None, 10, 'bold'))
 
         for col in columns:
             self.tree.heading(col, text=col)
