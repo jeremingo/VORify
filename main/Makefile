@@ -8,7 +8,7 @@ CFLAGS = -Ofast -W
 INCLUDES =
 
 # Libraries to link against
-LIBS =
+LIBS = -lGeographicLib
 
 # Source files (add .cpp if needed)
 SRCS = main.cpp stations_within_range.cpp generate_nmea.cpp calculate_bearing.cpp intersection.cpp stations_to_json.cpp

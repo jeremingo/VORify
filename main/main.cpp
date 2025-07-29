@@ -9,6 +9,9 @@
 #include <shared_mutex>
 #include <chrono>
 #include <memory>
+#include <GeographicLib/Geodesic.hpp>
+
+using namespace GeographicLib;
 
 std::string generateNMEA(double lat, double lon);
 std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
@@ -115,6 +118,13 @@ void startBluetoothServer(std::optional<Location>& location, bool& running) {
     }).detach();
 }
 
+double computeDistance(double lat1, double lon1, double lat2, double lon2) {
+  const Geodesic& geod = Geodesic::WGS84();
+  double s12;
+  geod.Inverse(lat1, lon1, lat2, lon2, s12);
+  return s12 / 1000.0; // convert meters to kilometers
+}
+
 int main() {
     std::vector<std::shared_ptr<Entry>> entries = getStationsWithinRange(35.0, 128.0, 400);
     std::optional<Location> location = std::nullopt;
@@ -145,6 +155,21 @@ int main() {
             std::ostringstream out;
             out << location->lat << " " << location->lon << "\n";
             std::cout << out.str();
+
+            for (auto& entry : entries) {
+              std::lock_guard<std::mutex> entryLock(entry->mutex);
+              entry->distance = computeDistance(
+                std::stod(location->lat),
+                std::stod(location->lon),
+                std::stod(entry->location.lat),
+                std::stod(entry->location.lon));
+            }
+          }
+          else {
+            for (auto& entry : entries) {
+              std::lock_guard<std::mutex> entryLock(entry->mutex);
+              entry->distance = std::nullopt;
+            }
           }
         }
     }

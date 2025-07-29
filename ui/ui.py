@@ -29,7 +29,7 @@ class VORApp:
         vsb = ttk.Scrollbar(frame, orient="vertical")
         hsb = ttk.Scrollbar(frame, orient="horizontal")
 
-        columns = ("Ident", "Frequency", "Latitude", "Longitude", "Bearing")
+        columns = ("Ident", "Frequency", "Latitude", "Longitude", "Bearing", "Distance")
         self.tree = ttk.Treeview(frame, columns=columns, show="headings",
                                  yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
@@ -59,7 +59,8 @@ class VORApp:
                     item.get("frequency", ""),
                     item.get("location", {}).get("lat", ""),
                     item.get("location", {}).get("lon", ""),
-                    item.get("bearing", {}).get("value", "") if item.get("bearing") else ""
+                    item.get("bearing", {}).get("value", "") if item.get("bearing") else "",
+                    item.get("distance", "") if item.get("distance") else ""
                 )
                 for item in parsed
             ]
