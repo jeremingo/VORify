@@ -17,7 +17,7 @@ std::string generateNMEA(double lat, double lon);
 std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
 std::optional<double> calculateBearing(double frequency);
 std::optional<Location> intersection(const std::vector<std::shared_ptr<Entry>>& entries);
-std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries);
+std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries, const std::optional<Location>& location);
 void updateStationsWithinRange(std::vector<std::shared_ptr<Entry>>& entries1, double lat, double lon, int range);
 
 FILE* startBluetoothServer() {
@@ -39,8 +39,8 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 std::shared_mutex entriesMutex;
 std::mutex locationMutex;
 
-void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, bool& running) {
-  std::thread([&entries, &running]() {
+void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, bool& running) {
+  std::thread([&entries, &location, &running]() {
     std::string command = "python3 ../ui/ui.py";
     FILE* python = popen(command.c_str(), "w");
     if (!python) {
@@ -51,7 +51,7 @@ void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, bool& running
     while (running) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
-      std::string json = entriesToJson(entries);
+      std::string json = entriesToJson(entries, location);
       fprintf(python, "%s\n", json.c_str());
       fflush(python);
     }
@@ -130,7 +130,7 @@ int main() {
     std::optional<Location> location = std::nullopt;
     bool running = true;
 
-    startJSONOutput(entries, running);
+    startJSONOutput(entries, location, running);
     startBearingUpdater(entries, running);
     startStationsUpdater(entries, location, running);
     startBluetoothServer(location, running);
