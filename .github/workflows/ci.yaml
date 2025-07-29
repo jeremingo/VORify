@@ -20,7 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc librtlsdr-dev libbluetooth-dev libasound2-dev autoconf automake libtool pkg-config git
+        sudo apt-get install -y gcc librtlsdr-dev libbluetooth-dev libasound2-dev autoconf automake libtool pkg-config git libgeographiclib-dev
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
         ./bootstrap.sh
