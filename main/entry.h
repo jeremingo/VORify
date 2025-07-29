@@ -15,6 +15,7 @@ struct Location {
 };
 
 struct Entry {
+  std::string name;
   std::string id;
   double frequency;
   Location location;

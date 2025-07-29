@@ -10,6 +10,7 @@ std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries) {
     for (size_t i = 0; i < entries.size(); ++i) {
         const auto& e = entries[i];
         oss << "{";
+        oss << "\"name\":\"" << e->name << "\",";
         oss << "\"id\":\"" << e->id << "\",";
         oss << "\"frequency\":" << e->frequency << ",";
         oss << "\"location\":{\"lat\":\"" << e->location.lat << "\",\"lon\":\"" << e->location.lon << "\"},";

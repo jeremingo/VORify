@@ -29,7 +29,7 @@ class VORApp:
         vsb = ttk.Scrollbar(frame, orient="vertical")
         hsb = ttk.Scrollbar(frame, orient="horizontal")
 
-        columns = ("Ident", "Frequency", "Latitude", "Longitude", "Bearing", "Distance")
+        columns = ("Name", "Ident", "Frequency", "Latitude", "Longitude", "Bearing", "Distance")
         self.tree = ttk.Treeview(frame, columns=columns, show="headings",
                                  yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
@@ -55,6 +55,7 @@ class VORApp:
             parsed = json.loads(json_data)
             self.vor_data = [
                 (
+                    item.get("name", ""),
                     item.get("id", ""),
                     item.get("frequency", ""),
                     item.get("location", {}).get("lat", ""),
