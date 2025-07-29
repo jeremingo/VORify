@@ -21,9 +21,10 @@ std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, con
     while (fgets(buffer, sizeof(buffer), pipe)) {
         std::istringstream iss(buffer);
         Entry e;
-        if (iss >> e.id >> e.location.lat >> e.location.lon >> e.frequency) {
+        if (iss >> e.name >> e.id >> e.location.lat >> e.location.lon >> e.frequency) {
           std::cout << e.id << std::endl;
             auto entry = std::make_shared<Entry>();
+            entry->name = e.name;
             entry->id = e.id;
             entry->location = e.location;
             entry->frequency = e.frequency;
