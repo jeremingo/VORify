@@ -18,9 +18,14 @@ std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries) {
         if (e->bearing.has_value()) {
             auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(
                 e->bearing->timestamp.time_since_epoch()).count();
-            oss << "\"bearing\":{\"value\":" << e->bearing->value << ",\"timestamp\":" << std::fixed << std::setprecision(6) << seconds << "}";
+            oss << "\"bearing\":{\"value\":" << e->bearing->value << ",\"timestamp\":" << std::fixed << std::setprecision(6) << seconds << "},";
         } else {
-            oss << "\"bearing\":null";
+            oss << "\"bearing\":null,";
+        }
+        if (e->distance.has_value()) {
+            oss << "\"distance\":" << std::fixed << std::setprecision(3) << e->distance.value();
+        } else {
+            oss << "\"distance\":null";
         }
         oss << "}";
         if (i < entries.size() - 1) {
@@ -28,5 +33,6 @@ std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries) {
         }
     }
     oss << "]";
+
     return oss.str();
 }
