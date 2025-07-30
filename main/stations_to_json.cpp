@@ -4,9 +4,17 @@
 #include <vector>
 #include <memory>
 
-std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries) {
+std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries, const std::optional<Location>& location) {
     std::ostringstream oss;
-    oss << "[";
+    oss << "{ \"location\": ";
+    if (location.has_value()) {
+      oss << "{ \"lat\": " << location->lat << ", \"lon\": " << location->lon << " }, ";
+    }
+    else {
+      oss << "null, ";
+    }
+
+    oss << "\"stations\": [";
     for (size_t i = 0; i < entries.size(); ++i) {
         const auto& e = entries[i];
         oss << "{";
@@ -33,7 +41,7 @@ std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries) {
             oss << ",";
         }
     }
-    oss << "]";
+    oss << "] }";
 
     return oss.str();
 }

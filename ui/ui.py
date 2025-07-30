@@ -10,17 +10,20 @@ class VORApp:
         self.root = root
         self.vor_data = []
         self.origin_vor = None
+        self.current_location = None
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
 
         self.create_widgets()
-
-        # Start background thread to listen for stdin
         threading.Thread(target=self.listen_for_input, daemon=True).start()
 
     def create_widgets(self):
+
+        self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
+        self.location_label.pack(pady=5)
+
         self.change_button = ttk.Button(self.root, text="Highlight by ID", command=self.change_origin)
         self.change_button.pack(pady=5)
 
@@ -49,15 +52,28 @@ class VORApp:
         self.tree.pack(fill=tk.BOTH, expand=True)
 
     def populate_table(self):
+        # Update location label
+        if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
+            lat = self.current_location["lat"]
+            lon = self.current_location["lon"]
+            self.location_label.config(text=f"Lat: {lat:.6f} Lon: {lon:.6f}")
+        else:
+            self.location_label.config(text="No known location")
+
+        # Update VOR table
         self.tree.delete(*self.tree.get_children())
         for row in self.vor_data:
-            tag = "origin" if self.origin_vor and row[0] == self.origin_vor else ""
+            tag = "origin" if self.origin_vor and row[1] == self.origin_vor else ""
             self.tree.insert("", tk.END, values=row, tags=(tag,))
         self.tree.tag_configure("origin", background="#d1e7dd")  # Light green
 
     def update_data(self, json_data):
         try:
             parsed = json.loads(json_data)
+
+            self.current_location = parsed.get("location")
+            stations = parsed.get("stations", [])
+
             self.vor_data = [
                 (
                     item.get("name", ""),
@@ -66,7 +82,7 @@ class VORApp:
                     item.get("bearing", {}).get("value", "") if item.get("bearing") else "",
                     item.get("distance", "") if item.get("distance") else ""
                 )
-                for item in parsed
+                for item in stations
             ]
             self.root.after(0, self.populate_table)
         except Exception as e:
@@ -80,19 +96,18 @@ class VORApp:
                 break  # EOF
             buffer += line
             try:
-                # Try parsing JSON (must be full object)
                 json.loads(buffer)
                 self.update_data(buffer)
                 buffer = ""
             except json.JSONDecodeError:
-                continue  # Wait for more lines to complete the JSON
+                continue
 
     def change_origin(self):
         search = simpledialog.askstring("Highlight Entry", "Enter Station ID to highlight:")
         if search:
-            found = next((vor for vor in self.vor_data if search.lower() in vor[0].lower()), None)
+            found = next((vor for vor in self.vor_data if search.lower() in vor[1].lower()), None)
             if found:
-                self.origin_vor = found[0]
+                self.origin_vor = found[1]
                 self.populate_table()
             else:
                 messagebox.showinfo("Not Found", f"No station found for: {search}")
