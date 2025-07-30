@@ -134,6 +134,13 @@ class VORApp:
         map_widget.set_position(20, 0)
         map_widget.set_zoom(0)
 
+        def release(event):
+            coordinate_mouse_pos = map_widget.convert_canvas_coords_to_decimal_coords(*map_widget.mouse_click_position)
+            map_widget.map_click_callback(coordinate_mouse_pos)
+
+        map_widget.canvas.unbind("<B1-Motion>")
+        map_widget.canvas.bind("<ButtonRelease-1>", release)
+
         def move(dx=0, dy=0):
             lat, lon = map_widget.get_position()
             map_widget.set_position(lat + dy, lon + dx)
