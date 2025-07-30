@@ -41,7 +41,7 @@ std::mutex locationMutex;
 
 void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, bool& running) {
   std::thread([&entries, &location, &running]() {
-    std::string command = "python3 ../ui/ui.py";
+    std::string command = "../venv/bin/python3 ../ui/ui.py";
     FILE* python = popen(command.c_str(), "w");
     if (!python) {
       std::cerr << "Failed to start Python script" << std::endl;
