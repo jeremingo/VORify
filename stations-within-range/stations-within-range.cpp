@@ -123,7 +123,9 @@ int main(int argc, char* argv[]) {
   });
 
   for (const auto& s : nearby) {
-    std::cout << s.name << " " << s.id << " " << std::setprecision(13) << s.lat << " " << s.lon << " " << s.freq << " " << s.distance << "\n";
+    std::string name = s.name;
+    std::replace(name.begin(), name.end(), ' ', '_');
+    std::cout << name << " " << s.id << " " << std::setprecision(13) << s.lat << " " << s.lon << " " << s.freq << " " << s.distance << "\n";
   }
 
   return 0;
