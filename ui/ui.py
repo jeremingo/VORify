@@ -161,6 +161,8 @@ class VORApp:
             self.origin_location_label.config(text=f"Origin Lat: {lat:.6f} Lon: {lon:.6f}")
             self.origin_location = {"lat": lat, "lon": lon}
 
+            print(f"{lat} {lon}", flush=True)
+
             # Hide map UI and show main UI
             self.map_frame.destroy()
             self.location_label.pack(pady=5)
