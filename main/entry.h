@@ -12,6 +12,10 @@ struct BearingInfo {
 struct Location {
   std::string lat;
   std::string lon;
+
+  bool operator==(const Location& other) const {
+    return lat == other.lat && lon == other.lon;
+  }
 };
 
 struct Entry {
