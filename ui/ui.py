@@ -163,6 +163,8 @@ class VORApp:
 
             print(f"{lat} {lon}", flush=True)
 
+            self.update_data("{\"location\": null, \"stations\": []}")
+
             # Hide map UI and show main UI
             self.map_frame.destroy()
             self.location_label.pack(pady=5)
