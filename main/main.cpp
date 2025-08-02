@@ -10,6 +10,11 @@
 #include <chrono>
 #include <memory>
 #include <GeographicLib/Geodesic.hpp>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <boost/process.hpp>
+#include <boost/asio.hpp>
 
 using namespace GeographicLib;
 
@@ -39,25 +44,47 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 std::shared_mutex entriesMutex;
 std::mutex locationMutex;
 
-void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, bool& running) {
-  std::thread([&entries, &location, &running]() {
-    std::string command = "../venv/bin/python3 ../ui/ui.py";
-    FILE* python = popen(command.c_str(), "w");
-    if (!python) {
-      std::cerr << "Failed to start Python script" << std::endl;
-      return;
-    }
+void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries,
+                     std::optional<Location>& location,
+                     std::optional<Location>& origin_location,
+                     bool& running) {
+    std::thread([&entries, &location, &origin_location, &running]() {
+        boost::asio::io_context io;
 
-    while (running) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
-      std::string json = entriesToJson(entries, location);
-      fprintf(python, "%s\n", json.c_str());
-      fflush(python);
-    }
+        boost::process::opstream child_stdin;
+        boost::process::ipstream child_stdout;
 
-    pclose(python);
-  }).detach();
+        boost::process::child python_process(
+            "../venv/bin/python3 ../ui/ui.py",
+            boost::process::std_in < child_stdin,
+            boost::process::std_out > child_stdout,
+            io
+        );
+
+        // Reader thread
+        std::thread reader([&origin_location, &child_stdout]() {
+            std::string line;
+            while (std::getline(child_stdout, line)) {
+                double lat, lon;
+                if (sscanf(line.c_str(), "%lf %lf", &lat, &lon) == 2) {
+                    origin_location = Location{std::to_string(lat), std::to_string(lon)};
+                    std::cout << "Updated origin_location to: " << lat << ", " << lon << std::endl;
+                }
+            }
+        });
+
+        // Writer loop
+        while (running && python_process.running()) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
+            std::string json = entriesToJson(entries, location);
+            child_stdin << json << std::endl;
+        }
+
+        child_stdin.pipe().close();
+        python_process.wait();
+        reader.join();
+    }).detach();
 }
 
 void startBearingUpdater(std::vector<std::shared_ptr<Entry>>& entries, bool& running) {
@@ -128,9 +155,10 @@ double computeDistance(double lat1, double lon1, double lat2, double lon2) {
 int main() {
     std::vector<std::shared_ptr<Entry>> entries = getStationsWithinRange(35.0, 128.0, 400);
     std::optional<Location> location = std::nullopt;
+    std::optional<Location> origin_location = std::nullopt;
     bool running = true;
 
-    startJSONOutput(entries, location, running);
+    startJSONOutput(entries, location, origin_location, running);
     startBearingUpdater(entries, running);
     startStationsUpdater(entries, location, running);
     startBluetoothServer(location, running);

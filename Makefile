@@ -1,5 +1,9 @@
 SUBDIRS := $(wildcard */)
 
+EXCLUDE := venv/
+
+SUBDIRS := $(filter-out $(EXCLUDE), $(SUBDIRS))
+
 .PHONY: all clean $(SUBDIRS)
 
 all: $(SUBDIRS)
