@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <thread>
 #include <mutex>
-#include <shared_mutex>
 #include <chrono>
 #include <memory>
 #include <GeographicLib/Geodesic.hpp>
@@ -41,8 +40,9 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
     // Pipe stays open for reuse
 }
 
-std::shared_mutex entriesMutex;
+std::mutex entriesMutex;
 std::mutex locationMutex;
+std::mutex originLocationMutex;
 
 void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries,
                      std::optional<Location>& location,
@@ -62,12 +62,15 @@ void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries,
         );
 
         // Reader thread
-        std::thread reader([&origin_location, &child_stdout]() {
+        std::thread reader([&location, &origin_location, &child_stdout]() {
             std::string line;
             while (std::getline(child_stdout, line)) {
                 double lat, lon;
                 if (sscanf(line.c_str(), "%lf %lf", &lat, &lon) == 2) {
+                    std::lock_guard<std::mutex> locationLock(locationMutex);
+                    std::lock_guard<std::mutex> originLocationLock(originLocationMutex);
                     origin_location = Location{std::to_string(lat), std::to_string(lon)};
+                    location = std::nullopt;
                     std::cout << "Updated origin_location to: " << lat << ", " << lon << std::endl;
                 }
             }
@@ -76,7 +79,7 @@ void startJSONOutput(std::vector<std::shared_ptr<Entry>>& entries,
         // Writer loop
         while (running && python_process.running()) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
+            std::lock_guard<std::mutex> entriesLock(entriesMutex);
             std::string json = entriesToJson(entries, location);
             child_stdin << json << std::endl;
         }
@@ -92,40 +95,52 @@ void startBearingUpdater(std::vector<std::shared_ptr<Entry>>& entries, bool& run
         while (running) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             auto now = std::chrono::steady_clock::now();
-            std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
+            std::lock_guard<std::mutex> entriesLock(entriesMutex);
 
-            for (auto& entry : entries) {
-              std::unique_lock<std::mutex> entryLock(entry->mutex);
-                if (entry->is_identified &&
+            if (entries.empty()) {
+              continue;
+            }
+            auto it = std::find_if(entries.begin(), entries.end(), [now](const std::shared_ptr<Entry>& entry) {
+              std::lock_guard<std::mutex> entryLock(entry->mutex);
+              return entry->is_identified &&
                     (!entry->bearing.has_value() ||
-                     std::chrono::duration_cast<std::chrono::seconds>(now - entry->bearing->timestamp).count() >= 8)) {
-                  entryLock.unlock();
-                  std::cout << "getting bearing " << entry->id << std::endl;
-                    std::optional<double> bearing = calculateBearing(entry->frequency);
+                     std::chrono::duration_cast<std::chrono::seconds>(now - entry->bearing->timestamp).count() >= 15);
+            });
 
-                    if (bearing) {
-                      entryLock.lock();
-                        entry->bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
-                        entryLock.unlock();
-                    }
-                }
+            if (it != entries.end()) {
+              std::unique_lock<std::mutex> entryLock((*it)->mutex);
+              double frequency = (*it)->frequency;
+              entryLock.unlock();
+
+              std::optional<double> bearing = calculateBearing(frequency);
+
+              if(bearing) {
+                entryLock.lock();
+                (*it)->bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
+                entryLock.unlock();
+              }
             }
         }
     }).detach();
 }
 
 
-void startStationsUpdater(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, bool& running) {
-    std::thread([&entries, &location, &running]() {
+void startStationsUpdater(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, std::optional<Location>& origin_location, std::optional<Location>& last_search_location, bool& running) {
+    std::thread([&entries, &location, &origin_location, &last_search_location, &running]() {
         while (running) {
-          std::this_thread::sleep_for(std::chrono::seconds(60));
-          std::lock_guard<std::mutex> locationLock(locationMutex);
-          if (location) {
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          //std::lock_guard<std::mutex> locationLock(locationMutex);
+          std::lock_guard<std::mutex> originLocationLock(originLocationMutex);
+          if (origin_location) {
             std::cout << "UPDATING STATIONS" << std::endl;
 
-            std::unique_lock<std::shared_mutex> entriesLock(entriesMutex);
+            std::lock_guard<std::mutex> entriesLock(entriesMutex);
 
-            updateStationsWithinRange(entries, std::stod(location->lat), std::stod(location->lon), 400);
+            last_search_location = origin_location;
+
+            origin_location = std::nullopt;
+
+            updateStationsWithinRange(entries, std::stod(origin_location->lat), std::stod(origin_location->lon), 200);
           }
         }
     }).detach();
@@ -153,25 +168,26 @@ double computeDistance(double lat1, double lon1, double lat2, double lon2) {
 }
 
 int main() {
-    std::vector<std::shared_ptr<Entry>> entries = getStationsWithinRange(35.0, 128.0, 400);
+    std::vector<std::shared_ptr<Entry>> entries; 
     std::optional<Location> location = std::nullopt;
     std::optional<Location> origin_location = std::nullopt;
+    std::optional<Location> last_search_location = std::nullopt;
     bool running = true;
 
     startJSONOutput(entries, location, origin_location, running);
     startBearingUpdater(entries, running);
-    startStationsUpdater(entries, location, running);
+    startStationsUpdater(entries, location, origin_location, last_search_location, running);
     startBluetoothServer(location, running);
 
     while (running) {
         std::this_thread::sleep_for(std::chrono::seconds(4));
 
-        std::shared_lock<std::shared_mutex> entriesLock(entriesMutex);
+        std::lock_guard<std::mutex> entriesLock(entriesMutex);
 
         int count = 0;
         for (auto& entry : entries) {
             std::lock_guard<std::mutex> entryLock(entry->mutex);
-            if (entry->is_identified && entry->bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - entry->bearing->timestamp).count() <= 8)
+            if (entry->is_identified && entry->bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - entry->bearing->timestamp).count() <= 15)
                 ++count;
         }
 
@@ -180,9 +196,7 @@ int main() {
           std::lock_guard<std::mutex> locationLock(locationMutex);
           location = intersection(entries);
           if (location) {
-            std::ostringstream out;
-            out << location->lat << " " << location->lon << "\n";
-            std::cout << out.str();
+            std::cout << location->lat << " " << location->lon << "\n";
 
             for (auto& entry : entries) {
               std::lock_guard<std::mutex> entryLock(entry->mutex);
