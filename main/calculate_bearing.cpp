@@ -8,8 +8,8 @@
 #include <mutex>
 #include <chrono>
 
-std::optional<double> calculateBearing(double frequency) {
-    std::string cmd = "../wrap-bearing-calculator/wrap-bearing-calculator ../bearing-calculator/vorify " + std::to_string(frequency);
+std::optional<double> calculateBearing(std::string id, double frequency) {
+    std::string cmd = "../mock-bearing/mock-bearing " + id + " " + std::to_string(frequency);
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
