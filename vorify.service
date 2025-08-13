@@ -1,0 +1,22 @@
+[Unit]
+Description=VORify
+# Wait for Bluetooth service and graphical.target (UI) to be ready
+After=bluetooth.target graphical.target
+Requires=bluetooth.target
+
+[Service]
+# Run as the currently logged-in user (change 'pi' to your username)
+#User=pi
+# Use sudo for the executable
+ExecStart=/home/pi/VORify/main/vorify
+WorkingDirectory=/home/pi/VORify/main
+# Needed for GUI programs
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+# Optional: some GUI programs require this
+# ExecStartPre=/bin/sleep 5
+
+[Install]
+# Start when graphical session is up
+WantedBy=graphical.target
+
