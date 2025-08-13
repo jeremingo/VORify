@@ -29,8 +29,8 @@ def download_tile(z, x, y):
 
 time.sleep(10)
 
-# Loop through zoom levels 0 to 4
-for z in range(0, 5):
+# Loop through zoom levels 0 to 6
+for z in range(0, 7):
     max_xy = 2 ** z
     for x in range(max_xy):
         for y in range(max_xy):
