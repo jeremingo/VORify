@@ -5,8 +5,8 @@
 #include <mutex>
 
 struct BearingInfo {
-    double value;
-    std::chrono::steady_clock::time_point timestamp;
+  double value;
+  std::chrono::steady_clock::time_point timestamp;
 };
 
 struct Location {

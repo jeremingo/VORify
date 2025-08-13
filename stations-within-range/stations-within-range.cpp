@@ -44,8 +44,8 @@ double haversine(double lat1, double lon1, double lat2, double lon2) {
   lat2 = deg2rad(lat2);
 
   double a = sin(dlat/2) * sin(dlat/2) +
-         cos(lat1) * cos(lat2) *
-         sin(dlon/2) * sin(dlon/2);
+    cos(lat1) * cos(lat2) *
+    sin(dlon/2) * sin(dlon/2);
   double c = 2 * atan2(sqrt(a), sqrt(1-a));
   return EARTH_RADIUS_KM * c;
 }
@@ -63,7 +63,7 @@ std::vector<VORStation> readCSV(const std::string& filename) {
   std::string line;
   std::getline(file, line); // Skip header
 
-	// CSV file columns are "type, country, name, id, lat, lon, elev, mft, ref, freq, unit, chan, decl, north, range, kmm"
+  // CSV file columns are "type, country, name, id, lat, lon, elev, mft, ref, freq, unit, chan, decl, north, range, kmm"
   while (std::getline(file, line)) {
     std::stringstream ss(line);
     std::string token;
@@ -119,8 +119,8 @@ int main(int argc, char* argv[]) {
   }
 
   std::sort(nearby.begin(), nearby.end(), [](const VORStation& a, const VORStation& b) {
-    return a.distance < b.distance;
-  });
+      return a.distance < b.distance;
+      });
 
   for (const auto& s : nearby) {
     std::string name = s.name;
