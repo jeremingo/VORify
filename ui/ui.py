@@ -126,7 +126,7 @@ class VORApp:
             corner_radius=0,
             database_path=database_path,
             use_database_only=True,
-            max_zoom=4
+            max_zoom=6
         )
         map_widget.pack(fill="both", expand=True)
         map_widget.canvas.delete("button")
@@ -142,16 +142,18 @@ class VORApp:
         map_widget.canvas.bind("<ButtonRelease-1>", release)
 
         def move(dx=0, dy=0):
+            dx = dx * 10 / (map_widget.zoom - 1)
+            dy = dy * 10 / (map_widget.zoom - 1)
             lat, lon = map_widget.get_position()
             map_widget.set_position(lat + dy, lon + dx)
 
         def set_zoom(zoom):
             map_widget.set_zoom(zoom)
 
-        ttk.Button(control_frame, text="←", width=3, command=lambda: move(dx=-10)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="→", width=3, command=lambda: move(dx=10)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="↑", width=3, command=lambda: move(dy=10)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="↓", width=3, command=lambda: move(dy=-10)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(control_frame, text="←", width=3, command=lambda: move(dx=-1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(control_frame, text="→", width=3, command=lambda: move(dx=1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(control_frame, text="↑", width=3, command=lambda: move(dy=1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(control_frame, text="↓", width=3, command=lambda: move(dy=-1)).pack(side=tk.LEFT, padx=2)
 
         ttk.Button(control_frame, text="+", width=3, command=lambda: set_zoom(map_widget.zoom + 1)).pack(side=tk.LEFT, padx=10)
         ttk.Button(control_frame, text="-", width=3, command=lambda: set_zoom(map_widget.zoom - 1)).pack(side=tk.LEFT)

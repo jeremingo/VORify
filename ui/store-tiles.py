@@ -36,7 +36,7 @@ def store_tile(z, x, y, data):
     """, (z, x, y, TILE_URL, data))
 
 # Read all tiles from local folder and store in DB
-for z in range(0, 5):  # zoom 0 to 4
+for z in range(0, 7):  # zoom 0 to 6
     max_index = 2 ** z
     for x in range(max_index):
         for y in range(max_index):
