@@ -17,6 +17,7 @@ std::string buildIntersectionCommand(const std::vector<std::shared_ptr<Entry>>& 
             cmd += entry->location.lat + "," + entry->location.lon + "," + std::to_string(entry->bearing->value) + " ";
         }
     }
+    std::cout << cmd << std::endl;
     return cmd;
 }
 
