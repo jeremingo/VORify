@@ -119,7 +119,7 @@ class VORApp:
         self.map_frame.pack(fill=tk.BOTH, expand=True)
 
         control_frame = ttk.Frame(self.map_frame)
-        control_frame.pack(pady=5)
+        control_frame.pack(side=tk.RIGHT, pady=5)
 
         map_widget = TkinterMapView(
             self.map_frame,
@@ -128,7 +128,7 @@ class VORApp:
             use_database_only=True,
             max_zoom=6
         )
-        map_widget.pack(fill="both", expand=True)
+        map_widget.pack(side=tk.LEFT, fill="both", expand=True)
         map_widget.canvas.delete("button")
 
         map_widget.set_position(20, 0)
@@ -150,13 +150,17 @@ class VORApp:
         def set_zoom(zoom):
             map_widget.set_zoom(zoom)
 
-        ttk.Button(control_frame, text="←", width=3, command=lambda: move(dx=-1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="→", width=3, command=lambda: move(dx=1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="↑", width=3, command=lambda: move(dy=1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(control_frame, text="↓", width=3, command=lambda: move(dy=-1)).pack(side=tk.LEFT, padx=2)
+        btn_font = tkFont.Font(size=35, weight="bold")  # bigger font
+        style = ttk.Style()
+        style.configure("Big.TButton", font=btn_font)
 
-        ttk.Button(control_frame, text="+", width=3, command=lambda: set_zoom(map_widget.zoom + 1)).pack(side=tk.LEFT, padx=10)
-        ttk.Button(control_frame, text="-", width=3, command=lambda: set_zoom(map_widget.zoom - 1)).pack(side=tk.LEFT)
+        ttk.Button(control_frame, text="←", style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="→", style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↑", style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↓", style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
+
+        ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
         def on_map_click(coord):
             lat, lon = coord
