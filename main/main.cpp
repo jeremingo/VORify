@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <GeographicLib/Geodesic.hpp>
@@ -43,40 +44,23 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 std::mutex entriesMutex;
 std::mutex locationMutex;
 std::mutex originLocationMutex;
-
-void startStationsUpdater(std::vector<std::shared_ptr<Entry>>& entries, std::optional<Location>& location, std::optional<Location>& origin_location, std::optional<Location>& last_search_location, bool& running) {
-  std::thread([&entries, &location, &origin_location, &last_search_location, &running]() {
-      while (running) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      //std::lock_guard<std::mutex> locationLock(locationMutex);
-      std::lock_guard<std::mutex> originLocationLock(originLocationMutex);
-      if (origin_location) {
-      std::cout << "UPDATING STATIONS" << std::endl;
-
-      std::lock_guard<std::mutex> entriesLock(entriesMutex);
-
-      last_search_location = origin_location;
-
-      origin_location = std::nullopt;
-
-      updateStationsWithinRange(entries, std::stod(origin_location->lat), std::stod(origin_location->lon), 200);
-      }
-      }
-      }).detach();
-}
+std::atomic<bool> stationChangeNeeded(false);
 
 void startBluetoothServer(std::optional<Location>& location, bool& running) {
   std::thread([&location, &running]() {
-      FILE* bluetoothPipe = startBluetoothServer();
-      if (!bluetoothPipe) return 1;
-      while (running) {
+    FILE* bluetoothPipe = startBluetoothServer();
+    if (!bluetoothPipe) {
+      return 1;
+    }
+
+    while (running) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       std::lock_guard<std::mutex> locationLock(locationMutex);
       if (location) {
-      sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
+        sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
       }
-      }
-      }).detach();
+    }
+  }).detach();
 }
 
 double computeDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -95,7 +79,7 @@ int main() {
 
   //startJSONOutput(entries, location, origin_location, running);
   //startBearingUpdater(entries, running);
-  startStationsUpdater(entries, location, origin_location, last_search_location, running);
+  //startStationsUpdater(entries, location, origin_location, last_search_location, running);
   startBluetoothServer(location, running);
 
   boost::asio::io_context io;
@@ -111,16 +95,31 @@ int main() {
       );
 
   // Reader thread
-  std::thread reader([&location, &origin_location, &child_stdout]() {
+  std::thread reader([&entries, &location, &origin_location, &last_search_location, &child_stdout, &child_stdin]() {
     std::string line;
     while (std::getline(child_stdout, line)) {
       double lat, lon;
       if (sscanf(line.c_str(), "%lf %lf", &lat, &lon) == 2) {
+        stationChangeNeeded.store(true);
+
+        std::cout << "UPDATING STATIONS" << std::endl;
+
+        std::lock_guard<std::mutex> entriesLock(entriesMutex);
+
         std::lock_guard<std::mutex> locationLock(locationMutex);
         std::lock_guard<std::mutex> originLocationLock(originLocationMutex);
         origin_location = Location{std::to_string(lat), std::to_string(lon)};
         location = std::nullopt;
         std::cout << "Updated origin_location to: " << lat << ", " << lon << std::endl;
+
+        last_search_location = origin_location;
+
+        origin_location = std::nullopt;
+
+        updateStationsWithinRange(entries, std::stod(origin_location->lat), std::stod(origin_location->lon), 200);
+        stationChangeNeeded.store(false);
+        std::string json = entriesToJson(entries, location);
+        child_stdin << json << std::endl;
       }
     }
   });
@@ -175,8 +174,11 @@ int main() {
         }
       }
     }
-    std::string json = entriesToJson(entries, location);
-    child_stdin << json << std::endl;
+
+    if (!stationChangeNeeded.load()) {
+      std::string json = entriesToJson(entries, location);
+      child_stdin << json << std::endl;
+    }
   }
 
   child_stdin.pipe().close();
