@@ -14,7 +14,7 @@ INCLUDES =
 LIBS= -lbluetooth
 
 # Source files
-SRCS = bluetooth.c mock_gps.c
+SRCS = bluetooth-server.c
 
 # Object files (derived from source files)
 OBJS = $(SRCS:.c=.o)
