@@ -43,7 +43,6 @@ void sendToBluetooth(FILE* pipe, const std::string& data) {
 
 std::mutex entriesMutex;
 std::mutex locationMutex;
-std::mutex originLocationMutex;
 std::atomic<bool> stationChangeNeeded(false);
 
 void startBluetoothServer(std::optional<Location>& location, bool& running) {
@@ -73,8 +72,6 @@ double computeDistance(double lat1, double lon1, double lat2, double lon2) {
 int main() {
   std::vector<std::shared_ptr<Entry>> entries; 
   std::optional<Location> location = std::nullopt;
-  std::optional<Location> origin_location = std::nullopt;
-  std::optional<Location> last_search_location = std::nullopt;
   bool running = true;
 
   startBluetoothServer(location, running);
@@ -92,7 +89,7 @@ int main() {
       );
 
   // Reader thread
-  std::thread reader([&entries, &location, &origin_location, &last_search_location, &child_stdout, &child_stdin]() {
+  std::thread reader([&entries, &location, &child_stdout, &child_stdin]() {
     std::string line;
     while (std::getline(child_stdout, line)) {
       double lat, lon;
@@ -104,16 +101,10 @@ int main() {
         std::lock_guard<std::mutex> entriesLock(entriesMutex);
 
         std::lock_guard<std::mutex> locationLock(locationMutex);
-        std::lock_guard<std::mutex> originLocationLock(originLocationMutex);
-        origin_location = Location{std::to_string(lat), std::to_string(lon)};
         location = std::nullopt;
         std::cout << "Updated origin_location to: " << lat << ", " << lon << std::endl;
 
-        last_search_location = origin_location;
-
-        origin_location = std::nullopt;
-
-        updateStationsWithinRange(entries, std::stod(origin_location->lat), std::stod(origin_location->lon), 200);
+        updateStationsWithinRange(entries, lat, lon, 200);
         stationChangeNeeded.store(false);
         std::string json = entriesToJson(entries, location);
         child_stdin << json << std::endl;
