@@ -147,7 +147,7 @@ int main() {
         (*it)->bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
       }
       else {
-        continue;
+        entries.erase(it);
       }
     }
     else {
