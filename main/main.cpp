@@ -77,9 +77,6 @@ int main() {
   std::optional<Location> last_search_location = std::nullopt;
   bool running = true;
 
-  //startJSONOutput(entries, location, origin_location, running);
-  //startBearingUpdater(entries, running);
-  //startStationsUpdater(entries, location, origin_location, last_search_location, running);
   startBluetoothServer(location, running);
 
   boost::asio::io_context io;
