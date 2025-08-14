@@ -19,7 +19,7 @@ using namespace GeographicLib;
 
 std::string generateNMEA(double lat, double lon);
 std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
-std::optional<double> calculateBearing(double frequency);
+std::optional<double> calculateBearing(std::string id, double frequency);
 std::optional<Location> intersection(const std::vector<std::shared_ptr<Entry>>& entries);
 std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries, const std::optional<Location>& location);
 void updateStationsWithinRange(std::vector<std::shared_ptr<Entry>>& entries1, double lat, double lon, int range);
@@ -110,9 +110,10 @@ void startBearingUpdater(std::vector<std::shared_ptr<Entry>>& entries, bool& run
       if (it != entries.end()) {
       std::unique_lock<std::mutex> entryLock((*it)->mutex);
       double frequency = (*it)->frequency;
+      std::string id = (*it)->id;
       entryLock.unlock();
 
-      std::optional<double> bearing = calculateBearing(frequency);
+      std::optional<double> bearing = calculateBearing(id, frequency);
 
       if(bearing) {
         entryLock.lock();
