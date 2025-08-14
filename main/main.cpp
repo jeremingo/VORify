@@ -17,46 +17,47 @@
 #include <boost/asio.hpp>
 
 using namespace GeographicLib;
+using namespace std;
 
-std::string generateNMEA(double lat, double lon);
-std::vector<std::shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
-std::optional<double> calculateBearing(std::string id, double frequency);
-std::optional<Location> intersection(const std::vector<std::shared_ptr<Entry>>& entries);
-std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries, const std::optional<Location>& location);
-void updateStationsWithinRange(std::vector<std::shared_ptr<Entry>>& entries1, double lat, double lon, int range);
+string generateNMEA(double lat, double lon);
+vector<shared_ptr<Entry>> getStationsWithinRange(const double lat, const double lon, const int range);
+optional<double> calculateBearing(string id, double frequency);
+optional<Location> intersection(const vector<shared_ptr<Entry>>& entries);
+string entriesToJson(const vector<shared_ptr<Entry>>& entries, const optional<Location>& location);
+void updateStationsWithinRange(vector<shared_ptr<Entry>>& entries1, double lat, double lon, int range);
 
 FILE* startBluetoothServer() {
   FILE* pipe = popen("../bluetooth-server/bluetooth-server", "w");
   if (!pipe) {
-    std::cerr << "Failed to start bluetooth server\n";
+    cerr << "Failed to start bluetooth server\n";
     return nullptr;
   }
   return pipe;
 }
 
-void sendToBluetooth(FILE* pipe, const std::string& data) {
+void sendToBluetooth(FILE* pipe, const string& data) {
   if (!pipe) return;
   fputs(data.c_str(), pipe);
   fflush(pipe);
   // Pipe stays open for reuse
 }
 
-std::mutex entriesMutex;
-std::mutex locationMutex;
-std::atomic<bool> stationChangeNeeded(false);
+mutex entriesMutex;
+mutex locationMutex;
+atomic<bool> stationChangeNeeded(false);
 
-void startBluetoothServer(std::optional<Location>& location, bool& running) {
-  std::thread([&location, &running]() {
+void startBluetoothServer(optional<Location>& location, bool& running) {
+  thread([&location, &running]() {
     FILE* bluetoothPipe = startBluetoothServer();
     if (!bluetoothPipe) {
       return 1;
     }
 
     while (running) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      std::lock_guard<std::mutex> locationLock(locationMutex);
+      this_thread::sleep_for(chrono::seconds(1));
+      lock_guard<mutex> locationLock(locationMutex);
       if (location) {
-        sendToBluetooth(bluetoothPipe, generateNMEA(std::stod(location->lat), std::stod(location->lon)));
+        sendToBluetooth(bluetoothPipe, generateNMEA(stod(location->lat), stod(location->lon)));
       }
     }
   }).detach();
@@ -70,8 +71,8 @@ double computeDistance(double lat1, double lon1, double lat2, double lon2) {
 }
 
 int main() {
-  std::vector<std::shared_ptr<Entry>> entries; 
-  std::optional<Location> location = std::nullopt;
+  vector<shared_ptr<Entry>> entries; 
+  optional<Location> location = nullopt;
   bool running = true;
 
   startBluetoothServer(location, running);
@@ -89,53 +90,53 @@ int main() {
       );
 
   // Reader thread
-  std::thread reader([&entries, &location, &child_stdout, &child_stdin]() {
-    std::string line;
-    while (std::getline(child_stdout, line)) {
+  thread reader([&entries, &location, &child_stdout, &child_stdin]() {
+    string line;
+    while (getline(child_stdout, line)) {
       double lat, lon;
       if (sscanf(line.c_str(), "%lf %lf", &lat, &lon) == 2) {
         stationChangeNeeded.store(true);
 
-        std::cout << "UPDATING STATIONS" << std::endl;
+        cout << "UPDATING STATIONS" << endl;
 
-        std::lock_guard<std::mutex> entriesLock(entriesMutex);
+        lock_guard<mutex> entriesLock(entriesMutex);
 
-        std::lock_guard<std::mutex> locationLock(locationMutex);
-        location = std::nullopt;
-        std::cout << "Updated origin_location to: " << lat << ", " << lon << std::endl;
+        lock_guard<mutex> locationLock(locationMutex);
+        location = nullopt;
+        cout << "Updated origin_location to: " << lat << ", " << lon << endl;
 
         updateStationsWithinRange(entries, lat, lon, 200);
         stationChangeNeeded.store(false);
-        std::string json = entriesToJson(entries, location);
-        child_stdin << json << std::endl;
+        string json = entriesToJson(entries, location);
+        child_stdin << json << endl;
       }
     }
   });
 
-  std::string json = entriesToJson(entries, location);
-  child_stdin << json << std::endl;
+  string json = entriesToJson(entries, location);
+  child_stdin << json << endl;
   while (running) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    this_thread::sleep_for(chrono::milliseconds(300));
 
-    std::lock_guard<std::mutex> entriesLock(entriesMutex);
+    lock_guard<mutex> entriesLock(entriesMutex);
 
     if (entries.size() == 0) {
       continue;
     }
 
-    auto now = std::chrono::steady_clock::now();
+    auto now = chrono::steady_clock::now();
 
-    auto it = std::find_if(entries.begin(), entries.end(), [now](const std::shared_ptr<Entry>& entry) {
+    auto it = find_if(entries.begin(), entries.end(), [now](const shared_ptr<Entry>& entry) {
         return entry->is_identified &&
         (!entry->bearing.has_value() ||
-         std::chrono::duration_cast<std::chrono::seconds>(now - entry->bearing->timestamp).count() >= 15);
+         chrono::duration_cast<chrono::seconds>(now - entry->bearing->timestamp).count() >= 15);
         });
 
     if (it != entries.end()) {
-      std::optional<double> bearing = calculateBearing((*it)->id, (*it)->frequency);
+      optional<double> bearing = calculateBearing((*it)->id, (*it)->frequency);
 
       if(bearing) {
-        (*it)->bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
+        (*it)->bearing = BearingInfo{*bearing, chrono::steady_clock::now()};
       }
       else {
         entries.erase(it);
@@ -147,37 +148,37 @@ int main() {
 
     int count = 0;
     for (auto& entry : entries) {
-      if (entry->is_identified && entry->bearing.has_value() && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - entry->bearing->timestamp).count() <= 15)
+      if (entry->is_identified && entry->bearing.has_value() && chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - entry->bearing->timestamp).count() <= 15)
         ++count;
     }
 
     if (count >= 2) {
-      std::cout << "intersecting " << count << std::endl;
-      std::lock_guard<std::mutex> locationLock(locationMutex);
+      cout << "intersecting " << count << endl;
+      lock_guard<mutex> locationLock(locationMutex);
       location = intersection(entries);
       if (location) {
-        std::cout << location->lat << " " << location->lon << "\n";
+        cout << location->lat << " " << location->lon << "\n";
 
-        updateStationsWithinRange(entries, std::stod(location->lat), std::stod(location->lon), 200);
+        updateStationsWithinRange(entries, stod(location->lat), stod(location->lon), 200);
 
         for (auto& entry : entries) {
           entry->distance = computeDistance(
-              std::stod(location->lat),
-              std::stod(location->lon),
-              std::stod(entry->location.lat),
-              std::stod(entry->location.lon));
+              stod(location->lat),
+              stod(location->lon),
+              stod(entry->location.lat),
+              stod(entry->location.lon));
         }
       }
       else {
         for (auto& entry : entries) {
-          entry->distance = std::nullopt;
+          entry->distance = nullopt;
         }
       }
     }
 
     if (!stationChangeNeeded.load()) {
-      std::string json = entriesToJson(entries, location);
-      child_stdin << json << std::endl;
+      string json = entriesToJson(entries, location);
+      child_stdin << json << endl;
     }
   }
 
