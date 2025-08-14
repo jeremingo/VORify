@@ -3,14 +3,16 @@
 #include <optional>
 #include <chrono>
 
+using namespace std;
+
 struct BearingInfo {
   double value;
-  std::chrono::steady_clock::time_point timestamp;
+  chrono::steady_clock::time_point timestamp;
 };
 
 struct Location {
-  std::string lat;
-  std::string lon;
+  string lat;
+  string lon;
 
   bool operator==(const Location& other) const {
     return lat == other.lat && lon == other.lon;
@@ -18,11 +20,11 @@ struct Location {
 };
 
 struct Entry {
-  std::string name;
-  std::string id;
+  string name;
+  string id;
   double frequency;
   Location location;
   bool is_identified = true;
-  std::optional<BearingInfo> bearing;
-  std::optional<double> distance;
+  optional<BearingInfo> bearing;
+  optional<double> distance;
 };

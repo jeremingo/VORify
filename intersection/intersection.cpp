@@ -10,6 +10,7 @@
 
 
 using namespace GeographicLib;
+using namespace std;
 
 struct Station {
   double lat, lon, bearing;
@@ -42,9 +43,9 @@ LatLon xyzToPosition(double x, double y, double z) {
 }
 
 // Compute the average position minimizing distance to all points
-LatLon geographicMedian(const std::vector<LatLon>& points, int maxIterations = 100, double tolerance = 1e-12) {
+LatLon geographicMedian(const vector<LatLon>& points, int maxIterations = 100, double tolerance = 1e-12) {
   // Convert all to Cartesian
-  std::vector<std::tuple<double, double, double>> xyzList;
+  vector<tuple<double, double, double>> xyzList;
   for (const auto& p : points) {
     double x, y, z;
     latLonToXYZ(p, x, y, z);
@@ -91,12 +92,12 @@ LatLon geographicMedian(const std::vector<LatLon>& points, int maxIterations = 1
 
 // Normalize angle to [-180, 180)
 double normalizeAngle(double angle) {
-  return std::fmod(angle + 540.0, 360.0) - 180.0;
+  return fmod(angle + 540.0, 360.0) - 180.0;
 }
 
 // Check if two azimuths are close enough
 bool azimuthMatch(double a1, double a2, double threshold = 1e-6) {
-  return std::abs(normalizeAngle(a1 - a2)) < threshold;
+  return abs(normalizeAngle(a1 - a2)) < threshold;
 }
 
 // Step along line1 and see when line2 points *to* that step point with the correct azimuth
@@ -119,7 +120,7 @@ bool findIntersection(
 
     double azErr = normalizeAngle(az2ToPoint - az2);
 
-    if (std::abs(azErr) < 1e-2) {  // 0.00001 deg ~ 1.1 meters precision
+    if (abs(azErr) < 1e-2) {  // 0.00001 deg ~ 1.1 meters precision
       latInt = plat;
       lonInt = plon;
       return true;
@@ -129,7 +130,7 @@ bool findIntersection(
   return false;
 }
 
-void calc_position(const std::vector<Station>& stations, double& outLat, double& outLon) {
+void calc_position(const vector<Station>& stations, double& outLat, double& outLon) {
 
   const Geodesic& geod = Geodesic::WGS84();
   if (stations.size() < 2) { // If we received just one VOR, position cannot ne calculated
@@ -138,11 +139,11 @@ void calc_position(const std::vector<Station>& stations, double& outLat, double&
   }
 
   else { // we received more than one VOR. create a vector of possible posisions from every pair of VORs.
-    std::vector<LatLon> results;
+    vector<LatLon> results;
     LatLon position;
 
     for (auto it1 = stations.begin(); it1 != stations.end(); ++it1) {
-      for (auto it2 = std::next(it1); it2 != stations.end(); ++it2) {
+      for (auto it2 = next(it1); it2 != stations.end(); ++it2) {
         if (findIntersection(geod,
               it1->lat, it1->lon, it1->bearing,
               it2->lat, it2->lon, it2->bearing,
@@ -165,44 +166,44 @@ void calc_position(const std::vector<Station>& stations, double& outLat, double&
         outLat = position.lat;
         outLon = position.lon;
       }
-      std::cout << outLat << " " << outLon << "\n";
+      cout << outLat << " " << outLon << "\n";
     }
   }
   return ;
 }
 
 // Parse input string "lat,lon,bearing"
-std::optional<Station> parseStation(const std::string& input) {
-  std::stringstream ss(input);
-  std::string token;
+optional<Station> parseStation(const string& input) {
+  stringstream ss(input);
+  string token;
   Station s;
   int count = 0;
-  while (std::getline(ss, token, ',')) {
+  while (getline(ss, token, ',')) {
     try {
-      double val = std::stod(token);
+      double val = stod(token);
       if (count == 0) s.lat = val;
       else if (count == 1) s.lon = val;
       else if (count == 2) s.bearing = val;
       else break;
     } catch (...) {
-      return std::nullopt;
+      return nullopt;
     }
     ++count;
   }
-  return (count == 3) ? std::optional<Station>{s} : std::nullopt;
+  return (count == 3) ? optional<Station>{s} : nullopt;
 }
 
 int main(int argc, char* argv[]) {
   if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " lat,lon,bearing lat,lon,bearing ...\n";
+    cerr << "Usage: " << argv[0] << " lat,lon,bearing lat,lon,bearing ...\n";
     return 1;
   }
 
-  std::vector<Station> stations;
+  vector<Station> stations;
   for (int i = 1; i < argc; ++i) {
     auto s = parseStation(argv[i]);
     if (!s) {
-      std::cerr << "Invalid input: " << argv[i] << "\n";
+      cerr << "Invalid input: " << argv[i] << "\n";
       return 1;
     }
     stations.push_back(*s);

@@ -31,6 +31,8 @@
 #define CHAR_GAP 350        // Gap between characters in milliseconds
 #define WORD_GAP 4000       // Gap between words in milliseconds
 
+using namespace std;
+
 constexpr int PCM_RATE = 48000;
 constexpr int MIN_DURATION_MS = 100;
 constexpr int MIN_DURATION_SAMPLES = PCM_RATE * MIN_DURATION_MS / 1000;
@@ -43,9 +45,9 @@ rtlsdr_dev_t *dev = nullptr;
 firfilt_rrrf filter;
 
 int squelch_threshold = 20;  // Default squelch threshold (1-100)
-std::string station_id = "";
+string station_id = "";
 
-std::map<std::string, char> morseMap = {
+map<string, char> morseMap = {
   {".-", 'A'}, {"-...", 'B'}, {"-.-.", 'C'}, {"-..", 'D'},
   {".", 'E'}, {"..-.", 'F'}, {"--.", 'G'}, {"....", 'H'},
   {"..", 'I'}, {".---", 'J'}, {"-.-", 'K'}, {".-..", 'L'},
@@ -59,10 +61,10 @@ std::map<std::string, char> morseMap = {
   {"----.", '9'},
 };
 
-std::string morse;
-auto last_tone_start = std::chrono::steady_clock::now();
-auto last_tone_end = std::chrono::steady_clock::now();
-double silence_duration;// = std::chrono::duration_cast<std::chrono::milliseconds>;
+string morse;
+auto last_tone_start = chrono::steady_clock::now();
+auto last_tone_end = chrono::steady_clock::now();
+double silence_duration;// = chrono::duration_cast<chrono::milliseconds>;
 
 // Create Low-pass FIR filter using liquid-dsp
 void createLowPassFilter(float cutoff, float fs) {
@@ -71,7 +73,7 @@ void createLowPassFilter(float cutoff, float fs) {
 }
 
 // Low-pass FIR filter using liquid-dsp
-void lowPassFilter(std::vector<float> &signal) {
+void lowPassFilter(vector<float> &signal) {
   for (size_t i = 0; i < signal.size(); i++) {
     firfilt_rrrf_push(filter, signal[i]);
     firfilt_rrrf_execute(filter, &signal[i]);
@@ -79,8 +81,8 @@ void lowPassFilter(std::vector<float> &signal) {
 }
 
 // Simple FIR filter function
-std::vector<double> apply_fir_filter(const std::vector<double>& input) {
-  std::vector<double> output(input.size(), 0);
+vector<double> apply_fir_filter(const vector<double>& input) {
+  vector<double> output(input.size(), 0);
   for (size_t i = FIR_ORDER; i < input.size(); ++i) {
     double sum = 0;
     for (size_t j = 0; j < FIR_ORDER; ++j) {
@@ -94,8 +96,8 @@ std::vector<double> apply_fir_filter(const std::vector<double>& input) {
 // Simple Hamming-windowed FIR band-pass filter (900–1100 Hz)
 class FIRFilter {
   static constexpr int TAPS = 101;
-  std::array<double, TAPS> coeffs;
-  std::vector<int16_t> history;
+  array<double, TAPS> coeffs;
+  vector<int16_t> history;
   int pos = 0;
 
   public:
@@ -143,7 +145,7 @@ class GoertzelDetector {
     s_prev = s_prev2 = 0;
   }
 
-  void process(const std::vector<double>& buffer) {
+  void process(const vector<double>& buffer) {
     reset();
     for (double sample : buffer) {
       double s = sample + coeff * s_prev - s_prev2;
@@ -161,7 +163,7 @@ class GoertzelDetector {
 class ToneDetector {
   GoertzelDetector goertzel_low;
   GoertzelDetector goertzel_high;
-  std::chrono::steady_clock::time_point start_time;
+  chrono::steady_clock::time_point start_time;
   bool tone_active = false;
   int active_samples = 0;
   double noise_floor = 1e-6; // Start with a small nonzero noise floor
@@ -170,11 +172,11 @@ class ToneDetector {
   ToneDetector(int sample_rate, int buffer_size)
     : goertzel_low(LOW_FREQ, sample_rate, buffer_size),
     goertzel_high(HIGH_FREQ, sample_rate, buffer_size) {
-      start_time = std::chrono::steady_clock::now();
+      start_time = chrono::steady_clock::now();
     }
 
-  void process_buffer(const std::vector<int16_t>& buffer) {
-    std::vector<double> normalized_buffer(buffer.size());
+  void process_buffer(const vector<int16_t>& buffer) {
+    vector<double> normalized_buffer(buffer.size());
     static char idCode[10] = "         ";
     static int idInx = 0;
 
@@ -184,7 +186,7 @@ class ToneDetector {
     }
 
     // Apply FIR band-pass filter
-    std::vector<double> filtered_signal = apply_fir_filter(normalized_buffer);
+    vector<double> filtered_signal = apply_fir_filter(normalized_buffer);
 
     // Compute Goertzel power
     goertzel_low.process(filtered_signal);
@@ -196,8 +198,8 @@ class ToneDetector {
 
     // Adaptive noise floor update
     //        noise_floor = 0.99 * noise_floor + 0.01 * power;
-    //        std::cout << "Power: " << power << " | Noise Floor: " << noise_floor << "\n";
-    //        std::cout << "Power low: " << power_low << "Power high: " << power_high << " Total power: " << power << "\n";
+    //        cout << "Power: " << power << " | Noise Floor: " << noise_floor << "\n";
+    //        cout << "Power low: " << power_low << "Power high: " << power_high << " Total power: " << power << "\n";
     //        bool detected = power > (noise_floor * 4.0);
 
     bool detected = power > 4;
@@ -205,19 +207,19 @@ class ToneDetector {
       active_samples += buffer.size();
       if (!tone_active && active_samples >= MIN_DURATION_SAMPLES) {
         tone_active = true;
-        auto now = std::chrono::steady_clock::now();
-        //                double elapsed_ms = std::chrono::duration<double, std::milli>(now - start_time).count();
-        silence_duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_tone_end).count();
-        //                std::cout << "Tone started at: " << elapsed_ms << " ms, >>>>>>> space is " << silence_duration << std::endl;
+        auto now = chrono::steady_clock::now();
+        //                double elapsed_ms = chrono::duration<double, milli>(now - start_time).count();
+        silence_duration = chrono::duration_cast<chrono::milliseconds>(now - last_tone_end).count();
+        //                cout << "Tone started at: " << elapsed_ms << " ms, >>>>>>> space is " << silence_duration << endl;
         last_tone_start = now;
         tone_active = true;
       }
     } else {
       if (tone_active && active_samples >= MIN_DURATION_SAMPLES) {
-        auto now = std::chrono::steady_clock::now();
-        //                double elapsed_ms = std::chrono::duration<double, std::milli>(now - start_time).count();
-        auto tone_duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_tone_start).count();
-        //                std::cout << "Tone stopped at: " << elapsed_ms << " ms, duration is " << tone_duration << std::endl;
+        auto now = chrono::steady_clock::now();
+        //                double elapsed_ms = chrono::duration<double, milli>(now - start_time).count();
+        auto tone_duration = chrono::duration_cast<chrono::milliseconds>(now - last_tone_start).count();
+        //                cout << "Tone stopped at: " << elapsed_ms << " ms, duration is " << tone_duration << endl;
         if (tone_duration < DOT_DURATION) morse += '.';
         else morse += '-';
 
@@ -230,22 +232,22 @@ class ToneDetector {
 
     if (tone_active && !morse.empty()) {
       if (silence_duration > WORD_GAP) {
-        if (morseMap.count(morse)) std::cout << morseMap[morse];
-        std::cout << "\n" << std::flush;
+        if (morseMap.count(morse)) cout << morseMap[morse];
+        cout << "\n" << flush;
         idCode[idInx++] = morseMap[morse];
         idCode[idInx] = 0;
         idInx = 0;
-        std::cout << "Decoded ID: " << idCode << std::endl;
+        cout << "Decoded ID: " << idCode << endl;
         if (station_id == idCode) {
-          std::cout << "Station ID matched" << std::endl << std::flush;
+          cout << "Station ID matched" << endl << flush;
         } else {
-          std::cout << "Station ID did not match" << std::endl << std::flush;
+          cout << "Station ID did not match" << endl << flush;
         }
         morse.clear();
 
       } else if (silence_duration > CHAR_GAP) {
         if (morseMap.count(morse)) {
-          std::cout << morseMap[morse] << std::flush;
+          cout << morseMap[morse] << flush;
           idCode[idInx++] = morseMap[morse];
         }
         morse.clear();
@@ -257,7 +259,7 @@ class ToneDetector {
 void processIQ(uint8_t *iq_buffer, uint32_t length, int squelch_threshold) {
   static ToneDetector detector(PCM_RATE, length);
   size_t num_samples = length / 2;
-  std::vector<float> i_samples(num_samples), q_samples(num_samples), am_signal(num_samples / DECIMATION);
+  vector<float> i_samples(num_samples), q_samples(num_samples), am_signal(num_samples / DECIMATION);
 
   // Convert IQ samples to floating point values
   for (size_t i = 0; i < num_samples; i++) {
@@ -271,7 +273,7 @@ void processIQ(uint8_t *iq_buffer, uint32_t length, int squelch_threshold) {
   // Apply squelch: mute signals below the threshold
   float threshold = squelch_threshold / 100.0;
   for (size_t i = 0; i < num_samples; i++) {
-    float signal_magnitude = std::sqrt(i_samples[i] * i_samples[i] + q_samples[i] * q_samples[i]);
+    float signal_magnitude = sqrt(i_samples[i] * i_samples[i] + q_samples[i] * q_samples[i]);
     if (signal_magnitude < threshold) {
       i_samples[i] = 0.0f;
       q_samples[i] = 0.0f;
@@ -286,7 +288,7 @@ void processIQ(uint8_t *iq_buffer, uint32_t length, int squelch_threshold) {
   for (size_t j = 0; j < num_samples; j += DECIMATION) {
     float i = i_samples[j] * gain;
     float q = q_samples[j] * gain;
-    am_signal[j / DECIMATION] = std::sqrt(i * i + q * q); // Envelope detection
+    am_signal[j / DECIMATION] = sqrt(i * i + q * q); // Envelope detection
 
     // AGC: Adjust gain based on signal level
     float signal_level = am_signal[j / DECIMATION];
@@ -294,7 +296,7 @@ void processIQ(uint8_t *iq_buffer, uint32_t length, int squelch_threshold) {
   }
 
   // Convert to PCM format
-  std::vector<int16_t> pcm(am_signal.size());
+  vector<int16_t> pcm(am_signal.size());
   for (size_t i = 0; i < am_signal.size(); i++) {
     int16_t sample = static_cast<int16_t>(am_signal[i] * 32767);
     pcm[i] = sample;
@@ -320,7 +322,7 @@ int main(int argc, char **argv) {
   // Parse station_id argument
   if (argc > 2) {
     station_id = argv[2];
-    std::cout << "Station ID argument: " << station_id << std::endl;
+    cout << "Station ID argument: " << station_id << endl;
   }
 
   // Parse squelch threshold argument
@@ -329,12 +331,12 @@ int main(int argc, char **argv) {
     if (threshold >= 1 && threshold <= 100) {
       squelch_threshold = threshold;
     } else {
-      std::cerr << "Invalid squelch value (must be 1-100), using default: " << squelch_threshold << "\n";
+      cerr << "Invalid squelch value (must be 1-100), using default: " << squelch_threshold << "\n";
     }
   }
 
   if (rtlsdr_open(&dev, 0) < 0) {
-    std::cerr << "Failed to open RTL-SDR" << std::endl;
+    cerr << "Failed to open RTL-SDR" << endl;
     return -1;
   }
 
@@ -342,15 +344,15 @@ int main(int argc, char **argv) {
   rtlsdr_set_sample_rate(dev, SAMPLE_RATE);
   // Enable AGC mode
   if (rtlsdr_set_agc_mode(dev, 1) < 0) {
-    std::cerr << "Failed to enable AGC mode" << std::endl;
+    cerr << "Failed to enable AGC mode" << endl;
   } else {
-    std::cout << "AGC mode enabled successfully" << std::endl;
+    cout << "AGC mode enabled successfully" << endl;
   }
   rtlsdr_reset_buffer(dev);
 
   createLowPassFilter(3000.0f, SAMPLE_RATE);
 
-  std::cout << "Starting RTL-SDR async stream... at " << float(freq/1000000.0) << "Mhz" << std::endl;
+  cout << "Starting RTL-SDR async stream... at " << float(freq/1000000.0) << "Mhz" << endl;
   rtlsdr_read_async(dev, rtlCallback, nullptr, 0, BUFFER_SIZE);
 
   firfilt_rrrf_destroy(filter);
