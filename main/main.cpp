@@ -167,6 +167,8 @@ int main() {
       if (location) {
         std::cout << location->lat << " " << location->lon << "\n";
 
+        updateStationsWithinRange(entries, std::stod(location->lat), std::stod(location->lon), 200);
+
         for (auto& entry : entries) {
           entry->distance = computeDistance(
               std::stod(location->lat),
