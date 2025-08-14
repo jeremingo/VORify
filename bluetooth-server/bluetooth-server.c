@@ -9,6 +9,7 @@
 #include <bluetooth/hci_lib.h>
 #include <bluetooth/sdp.h>
 #include <bluetooth/sdp_lib.h>
+#include <sys/select.h>
 
 static int server_socket = -1;
 static int client_socket = -1;
@@ -160,15 +161,17 @@ void bluetooth_init(const char *device_name) {
 }
 
 void bluetooth_send(const char *data) {
-  if (client_socket < 0) {
-    fprintf(stderr, "No client connected. Cannot send data.\n");
-    return;
-  }
+    if (client_socket < 0) {
+        fprintf(stderr, "No client connected. Cannot send data.\n");
+        return;
+    }
 
-  // Send data to the connected client
-  if (write(client_socket, data, strlen(data)) < 0) {
-    perror("Failed to send data over Bluetooth");
-  }
+    ssize_t sent = write(client_socket, data, strlen(data));
+    if (sent <= 0) {
+        perror("Send failed — assuming client disconnected");
+        close(client_socket);
+        client_socket = -1;
+    }
 }
 
 void bluetooth_stop() {
@@ -182,3 +185,68 @@ void bluetooth_stop() {
   }
   printf("Bluetooth server stopped.\n");
 }
+
+void bluetooth_wait_for_client() {
+    if (client_socket >= 0) {
+        close(client_socket);
+        client_socket = -1;
+    }
+
+    struct sockaddr_rc rem_addr = { 0 };
+    socklen_t opt = sizeof(rem_addr);
+
+    printf("Waiting for Bluetooth client...\n");
+    client_socket = accept(server_socket, (struct sockaddr *)&rem_addr, &opt);
+    if (client_socket < 0) {
+        perror("Failed to accept Bluetooth connection");
+        return;
+    }
+
+    char client_address[18] = { 0 };
+    ba2str(&rem_addr.rc_bdaddr, client_address);
+    printf("Accepted connection from %s\n", client_address);
+}
+
+int main() {
+  char gps_data[256];
+
+  // Initialize the Bluetooth server
+  bluetooth_init("MockGPS");
+
+  while (1) {
+    if (client_socket < 0) {
+      bluetooth_wait_for_client();
+      continue;  // go back to top so we don't send without a client
+    }
+
+    fd_set readfds;
+    struct timeval tv;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+    int retval = select(STDIN_FILENO + 1, &readfds, NULL, NULL, &tv);
+
+    if (retval == -1) {
+      perror("select()");
+      break;
+    } else if (retval) {
+      if (fgets(gps_data, sizeof(gps_data), stdin) != NULL) {
+        size_t len = strlen(gps_data);
+        if (len > 0 && gps_data[len - 1] == '\n') {
+          gps_data[len - 1] = '\0';
+        }
+
+        printf("Sending from stdin: %s\n", gps_data);
+        char with_crlf[260];
+        snprintf(with_crlf, sizeof(with_crlf), "%s\r\n", gps_data);
+        bluetooth_send(with_crlf);
+      }
+    }
+  }
+
+  bluetooth_stop();
+  return 0;
+}
+
