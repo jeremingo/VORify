@@ -128,6 +128,10 @@ int main() {
 
     std::lock_guard<std::mutex> entriesLock(entriesMutex);
 
+    if (entries.size() == 0) {
+      continue;
+    }
+
     auto now = std::chrono::steady_clock::now();
 
     auto it = std::find_if(entries.begin(), entries.end(), [now](const std::shared_ptr<Entry>& entry) {
@@ -142,6 +146,12 @@ int main() {
       if(bearing) {
         (*it)->bearing = BearingInfo{*bearing, std::chrono::steady_clock::now()};
       }
+      else {
+        continue;
+      }
+    }
+    else {
+      continue;
     }
 
     int count = 0;
