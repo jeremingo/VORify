@@ -23,7 +23,6 @@ std::string entriesToJson(const std::vector<std::shared_ptr<Entry>>& entries, co
     oss << "\"frequency\":" << e->frequency << ",";
     oss << "\"location\":{\"lat\":\"" << e->location.lat << "\",\"lon\":\"" << e->location.lon << "\"},";
     oss << "\"is_identified\":" << (e->is_identified ? "true" : "false") << ",";
-    std::lock_guard<std::mutex> entryLock(e->mutex);
     if (e->bearing.has_value()) {
       auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(
           e->bearing->timestamp.time_since_epoch()).count();
