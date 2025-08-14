@@ -17,7 +17,11 @@ class VORApp:
         self.root = root
         self.vor_data = []
         self.current_location = None
+        self.location_history = []
         self.origin_location = None
+        self.show_marks = False
+        self.mark = None
+        self.path = None
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
@@ -25,6 +29,49 @@ class VORApp:
 
         self.create_widgets()
         threading.Thread(target=self.listen_for_input, daemon=True).start()
+
+        # Create a frame for map view and controls
+        self.map_frame = ttk.Frame(self.root)
+        #self.map_frame.pack(fill=tk.BOTH, expand=True)
+
+        control_frame = ttk.Frame(self.map_frame)
+        control_frame.pack(side=tk.RIGHT, pady=5)
+
+        self.map_widget = TkinterMapView(
+            self.map_frame,
+            corner_radius=0,
+            database_path=database_path,
+            use_database_only=True,
+            max_zoom=6
+        )
+        self.map_widget.pack(side=tk.LEFT, fill="both", expand=True)
+        self.map_widget.canvas.delete("button")
+
+        self.map_widget.canvas.unbind("<B1-Motion>")
+        self.map_widget.canvas.unbind("<ButtonRelease-1>")
+
+        def move(dx=0, dy=0):
+            dx = dx * 10 / (self.map_widget.zoom - 1)
+            dy = dy * 10 / (self.map_widget.zoom - 1)
+            lat, lon = self.map_widget.get_position()
+            self.map_widget.set_position(lat + dy, lon + dx)
+
+        def set_zoom(zoom):
+            self.map_widget.set_zoom(zoom)
+
+        btn_font = tkFont.Font(size=27, weight="bold")  # bigger font
+        style = ttk.Style()
+        style.configure("Big.TButton", font=btn_font)
+
+
+        ttk.Button(control_frame, text="X", style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="←", style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="→", style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↑", style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↓", style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
+
+        ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
     def create_widgets(self):
         self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
@@ -35,6 +82,9 @@ class VORApp:
 
         self.map_button = ttk.Button(self.root, text="Pick Origin from Map", command=self.open_map_picker)
         self.map_button.pack(pady=5)
+
+        self.map_view_button = ttk.Button(self.root, text="Show Location on Map", command=self.open_map_view)
+        self.map_view_button.pack(pady=5)
 
         self.frame = ttk.Frame(self.root)
         self.frame.pack(fill=tk.BOTH, expand=True)
@@ -75,6 +125,8 @@ class VORApp:
     def update_data(self, json_data):
         try:
             parsed = json.loads(json_data)
+            if self.current_location is not None:
+              self.location_history.append((self.current_location["lat"], self.current_location["lon"]))
             self.current_location = parsed.get("location")
             stations = parsed.get("stations", [])
 
@@ -88,6 +140,8 @@ class VORApp:
                 )
                 for item in stations
             ]
+            if self.show_marks:
+              self.update_marks()
             self.root.after(0, self.populate_table)
         except Exception as e:
             print(f"[Error parsing JSON]: {e}", file=sys.stderr)
@@ -106,61 +160,49 @@ class VORApp:
             except json.JSONDecodeError:
                 continue
 
-    def open_map_picker(self):
+    def exit_map(self):
+
+        # Hide map UI and show main UI
+        self.map_frame.pack_forget()
+        self.location_label.pack(pady=5)
+        self.origin_location_label.pack(pady=5)
+        self.map_button.pack(pady=5)
+        self.map_view_button.pack(pady=5)
+        self.frame.pack(fill=tk.BOTH, expand=True)
+        self.tree.pack(fill=tk.BOTH, expand=True)
+        self.show_marks = False
+
+    def open_map(self):
         # Hide main UI widgets
         self.location_label.pack_forget()
         self.origin_location_label.pack_forget()
         self.map_button.pack_forget()
+        self.map_view_button.pack_forget()
         self.frame.pack_forget()
         self.tree.pack_forget()
 
-        # Create a frame for map view and controls
-        self.map_frame = ttk.Frame(self.root)
         self.map_frame.pack(fill=tk.BOTH, expand=True)
 
-        control_frame = ttk.Frame(self.map_frame)
-        control_frame.pack(side=tk.RIGHT, pady=5)
 
-        map_widget = TkinterMapView(
-            self.map_frame,
-            corner_radius=0,
-            database_path=database_path,
-            use_database_only=True,
-            max_zoom=6
-        )
-        map_widget.pack(side=tk.LEFT, fill="both", expand=True)
-        map_widget.canvas.delete("button")
+    def open_map_picker(self):
+        self.show_marks = False
+        if self.mark is not None:
+            self.mark.delete()
+            self.mark = None
+        if self.path is not None:
+            self.path.delete()
+            self.path = None
 
-        map_widget.set_position(20, 0)
-        map_widget.set_zoom(0)
+        self.open_map()
+
+        self.map_widget.set_position(20, 0)
+        self.map_widget.set_zoom(0)
 
         def release(event):
-            coordinate_mouse_pos = map_widget.convert_canvas_coords_to_decimal_coords(*map_widget.mouse_click_position)
-            map_widget.map_click_callback(coordinate_mouse_pos)
+            coordinate_mouse_pos = self.map_widget.convert_canvas_coords_to_decimal_coords(*self.map_widget.mouse_click_position)
+            self.map_widget.map_click_callback(coordinate_mouse_pos)
 
-        map_widget.canvas.unbind("<B1-Motion>")
-        map_widget.canvas.bind("<ButtonRelease-1>", release)
-
-        def move(dx=0, dy=0):
-            dx = dx * 10 / (map_widget.zoom - 1)
-            dy = dy * 10 / (map_widget.zoom - 1)
-            lat, lon = map_widget.get_position()
-            map_widget.set_position(lat + dy, lon + dx)
-
-        def set_zoom(zoom):
-            map_widget.set_zoom(zoom)
-
-        btn_font = tkFont.Font(size=35, weight="bold")  # bigger font
-        style = ttk.Style()
-        style.configure("Big.TButton", font=btn_font)
-
-        ttk.Button(control_frame, text="←", style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="→", style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↑", style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↓", style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
-
-        ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
+        self.map_widget.canvas.bind("<ButtonRelease-1>", release)
 
         def on_map_click(coord):
             lat, lon = coord
@@ -170,16 +212,44 @@ class VORApp:
             print(f"{lat} {lon}", flush=True)
 
             self.update_data("{\"location\": null, \"stations\": []}")
+            self.location_history = []
 
-            # Hide map UI and show main UI
-            self.map_frame.destroy()
-            self.location_label.pack(pady=5)
-            self.origin_location_label.pack(pady=5)
-            self.map_button.pack(pady=5)
-            self.frame.pack(fill=tk.BOTH, expand=True)
-            self.tree.pack(fill=tk.BOTH, expand=True)
+            self.exit_map()
 
-        map_widget.add_left_click_map_command(on_map_click)
+        self.map_widget.add_left_click_map_command(on_map_click)
+
+    def update_marks(self):
+        if self.current_location is not None:
+            self.map_widget.set_zoom(6)
+            lat = self.current_location["lat"]
+            lon = self.current_location["lon"]
+
+            self.map_widget.set_position(lat, lon)
+            if self.mark is not None:
+                self.mark.set_position(lat, lon)
+            else:
+                self.mark = self.map_widget.set_marker(lat, lon)
+            if len(self.location_history) > 1:
+                if self.path is not None:
+                    self.path.set_position_list(self.location_history)
+                else:
+                    self.path = self.map_widget.set_path(self.location_history)
+
+    def open_map_view(self):
+        self.show_marks = True
+        self.open_map()
+
+        if self.current_location is not None:
+            self.map_widget.set_zoom(6)
+        else:
+            self.map_widget.set_zoom(0)
+            self.map_widget.set_position(20, 0)
+
+        self.map_widget.canvas.unbind("<ButtonRelease-1>")
+
+        self.update_marks()
+
+
 
 
 # Run the app
