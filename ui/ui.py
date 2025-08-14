@@ -22,6 +22,7 @@ class VORApp:
         self.show_marks = False
         self.mark = None
         self.path = None
+        self.had_location = False
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
@@ -171,6 +172,12 @@ class VORApp:
         self.frame.pack(fill=tk.BOTH, expand=True)
         self.tree.pack(fill=tk.BOTH, expand=True)
         self.show_marks = False
+        if self.mark is not None:
+            self.mark.delete()
+            self.mark = None
+        if self.path is not None:
+            self.path.delete()
+            self.path = None
 
     def open_map(self):
         # Hide main UI widgets
@@ -185,14 +192,6 @@ class VORApp:
 
 
     def open_map_picker(self):
-        self.show_marks = False
-        if self.mark is not None:
-            self.mark.delete()
-            self.mark = None
-        if self.path is not None:
-            self.path.delete()
-            self.path = None
-
         self.open_map()
 
         self.map_widget.set_position(20, 0)
@@ -220,11 +219,13 @@ class VORApp:
 
     def update_marks(self):
         if self.current_location is not None:
-            self.map_widget.set_zoom(6)
             lat = self.current_location["lat"]
             lon = self.current_location["lon"]
+            if not self.had_location:
+                self.map_widget.set_zoom(6)
+                self.map_widget.set_position(lat, lon)
+                self.had_location = True
 
-            self.map_widget.set_position(lat, lon)
             if self.mark is not None:
                 self.mark.set_position(lat, lon)
             else:
@@ -234,16 +235,14 @@ class VORApp:
                     self.path.set_position_list(self.location_history)
                 else:
                     self.path = self.map_widget.set_path(self.location_history, width=3)
+        else:
+          self.had_location = False
+          self.map_widget.set_zoom(0)
+          self.map_widget.set_position(20, 0)
 
     def open_map_view(self):
         self.show_marks = True
         self.open_map()
-
-        if self.current_location is not None:
-            self.map_widget.set_zoom(6)
-        else:
-            self.map_widget.set_zoom(0)
-            self.map_widget.set_position(20, 0)
 
         self.map_widget.canvas.unbind("<ButtonRelease-1>")
 
