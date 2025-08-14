@@ -233,7 +233,7 @@ class VORApp:
                 if self.path is not None:
                     self.path.set_position_list(self.location_history)
                 else:
-                    self.path = self.map_widget.set_path(self.location_history)
+                    self.path = self.map_widget.set_path(self.location_history, width=3)
 
     def open_map_view(self):
         self.show_marks = True
