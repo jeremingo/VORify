@@ -88,15 +88,17 @@ class VORApp:
 
     def create_widgets(self):
         self.main_frame = ttk.Frame(self.root)
-        self.location_label = ttk.Label(self.main_frame, text="Pick origin location to start search", font=(None, 16))
-        self.location_label.pack(pady=5)
 
-        self.map_button = ttk.Button(self.main_frame, text="Pick Origin from Map", command=self.open_map_picker)
-        self.map_button.pack(pady=5)
+        header = ttk.Frame(self.main_frame)
+        self.location_label = ttk.Label(header, text="Pick origin location to start search", font=(None, 16))
+        self.location_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
-        self.map_view_button = ttk.Button(self.main_frame, text="Show Location on Map", command=self.open_map_view)
-        self.map_view_button.pack(pady=5)
+        buttons = ttk.Frame(header)
+        header.pack(fill=tk.X)
 
+        ttk.Button(buttons, text="V", style="Big.TButton", width=3, command=self.open_map_view).pack(side=tk.RIGHT, pady=6, padx=5)
+        ttk.Button(buttons, text="P", style="Big.TButton", width=3, command=self.open_map_picker).pack(side=tk.RIGHT, pady=6, padx=5)
+        buttons.pack(side=tk.RIGHT)
         self.frame = ttk.Frame(self.main_frame)
         self.frame.pack(fill=tk.BOTH, expand=True)
 
