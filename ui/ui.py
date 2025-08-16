@@ -34,7 +34,6 @@ class VORApp:
 
         # Create a frame for map view and controls
         self.map_frame = ttk.Frame(self.root)
-        #self.map_frame.pack(fill=tk.BOTH, expand=True)
 
 
         map_and_label = ttk.Frame(self.map_frame)
@@ -88,16 +87,17 @@ class VORApp:
         self.open_map_picker()
 
     def create_widgets(self):
-        self.location_label = ttk.Label(self.root, text="Pick origin location to start search", font=(None, 16))
+        self.main_frame = ttk.Frame(self.root)
+        self.location_label = ttk.Label(self.main_frame, text="Pick origin location to start search", font=(None, 16))
         self.location_label.pack(pady=5)
 
-        self.map_button = ttk.Button(self.root, text="Pick Origin from Map", command=self.open_map_picker)
+        self.map_button = ttk.Button(self.main_frame, text="Pick Origin from Map", command=self.open_map_picker)
         self.map_button.pack(pady=5)
 
-        self.map_view_button = ttk.Button(self.root, text="Show Location on Map", command=self.open_map_view)
+        self.map_view_button = ttk.Button(self.main_frame, text="Show Location on Map", command=self.open_map_view)
         self.map_view_button.pack(pady=5)
 
-        self.frame = ttk.Frame(self.root)
+        self.frame = ttk.Frame(self.main_frame)
         self.frame.pack(fill=tk.BOTH, expand=True)
 
         vsb = ttk.Scrollbar(self.frame, orient="vertical")
@@ -120,6 +120,7 @@ class VORApp:
         vsb.pack(side="right", fill="y")
         hsb.pack(side="bottom", fill="x")
         self.tree.pack(fill=tk.BOTH, expand=True)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def populate_table(self):
         if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
@@ -181,11 +182,7 @@ class VORApp:
 
         # Hide map UI and show main UI
         self.map_frame.pack_forget()
-        self.location_label.pack(pady=5)
-        self.map_button.pack(pady=5)
-        self.map_view_button.pack(pady=5)
-        self.frame.pack(fill=tk.BOTH, expand=True)
-        self.tree.pack(fill=tk.BOTH, expand=True)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.show_marks = False
         if self.mark is not None:
             self.mark.delete()
@@ -196,11 +193,7 @@ class VORApp:
 
     def open_map(self):
         # Hide main UI widgets
-        self.location_label.pack_forget()
-        self.map_button.pack_forget()
-        self.map_view_button.pack_forget()
-        self.frame.pack_forget()
-        self.tree.pack_forget()
+        self.main_frame.pack_forget()
 
         self.map_frame.pack(fill=tk.BOTH, expand=True)
 
