@@ -74,7 +74,9 @@ class VORApp:
         btn_font = tkFont.Font(size=27, weight="bold")  # bigger font
         style = ttk.Style()
         style.configure("Big.TButton", font=btn_font)
+        style.map("Big.TButton", background=[("!disabled", "active", "pressed", "lightgrey")])
         style.configure("Flash.TButton", font=btn_font, background="white")
+        style.map("Flash.TButton", background=[("!disabled", "active", "pressed", "white")])
 
 
         ttk.Button(control_frame, text="X", style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
