@@ -158,6 +158,19 @@ class VORApp:
         self.tree.pack(fill=tk.BOTH, expand=True)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+        self.start_y = 0
+
+        def on_button_press(event):
+            self.start_y = event.y
+
+        def on_mouse_drag(event):
+            delta = self.start_y - event.y
+            self.tree.yview_scroll(int(delta/12), "units")  # scroll proportionally
+            self.start_y = event.y
+
+        self.tree.bind("<ButtonPress-1>", on_button_press)
+        self.tree.bind("<B1-Motion>", on_mouse_drag)
+
     def populate_table(self):
         if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
             lat = self.current_location["lat"]
