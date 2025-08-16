@@ -135,15 +135,14 @@ class VORApp:
         self.frame.pack(fill=tk.BOTH, expand=True)
 
         vsb = ttk.Scrollbar(self.frame, orient="vertical")
-        hsb = ttk.Scrollbar(self.frame, orient="horizontal")
 
         columns = ("Name", "Ident", "Frequency", "Bearing", "Distance")
         self.tree = ttk.Treeview(self.frame, columns=columns, show="headings",
-                                 yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+                                 yscrollcommand=vsb.set)
 
 
         style = ttk.Style()
-        style.configure("Treeview", font=(None, 30), rowheight=50)
+        style.configure("Treeview", font=(None, 30), rowheight=56)
         style.configure("Treeview.Heading", font=(None, 10, 'bold'))
         style.map("Treeview.Heading", background=[("!disabled", "active", "pressed", "lightgrey")])
 
@@ -152,9 +151,7 @@ class VORApp:
             self.tree.column(col, anchor="center", width=120)
 
         vsb.config(command=self.tree.yview)
-        hsb.config(command=self.tree.xview)
         vsb.pack(side="right", fill="y")
-        hsb.pack(side="bottom", fill="x")
         self.tree.pack(fill=tk.BOTH, expand=True)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
