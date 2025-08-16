@@ -180,7 +180,7 @@ class VORApp:
             self.stop_flashing(self.current_location_button)
             if self.origin_location is not None:
                 if self.stage == 2:
-                    self.location_label.config(text="Lost location. Choose origin again")
+                    self.location_label.config(text="Lost location. Pick origin again")
                     self.start_flashing(self.change_origin_button)
                 else:
                     lat = self.origin_location["lat"]
@@ -188,7 +188,7 @@ class VORApp:
                     self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
             
             if len(self.vor_data) <= 1:
-                self.location_label.config(text="Not enough stations in range. Choose origin again")
+                self.location_label.config(text="Not enough stations in range. Pick origin again")
                 self.start_flashing(self.change_origin_button)
 
 
