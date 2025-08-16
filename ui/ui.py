@@ -26,7 +26,7 @@ class VORApp:
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
-        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", not self.root.attributes("-fullscreen")))
 
         self.create_widgets()
         threading.Thread(target=self.listen_for_input, daemon=True).start()
@@ -83,6 +83,8 @@ class VORApp:
 
         ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
         ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
+
+        self.open_map_picker()
 
     def create_widgets(self):
         self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
