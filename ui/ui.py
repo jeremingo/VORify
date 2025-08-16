@@ -78,7 +78,6 @@ class VORApp:
         style.configure("Flash.TButton", font=btn_font, background="white")
         style.map("Flash.TButton", background=[("!disabled", "active", "pressed", "white")])
 
-
         ttk.Button(control_frame, text="X", takefocus=0, style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
         ttk.Button(control_frame, text="←", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
         ttk.Button(control_frame, text="→", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
@@ -142,9 +141,11 @@ class VORApp:
         self.tree = ttk.Treeview(self.frame, columns=columns, show="headings",
                                  yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
+
         style = ttk.Style()
         style.configure("Treeview", font=(None, 30), rowheight=50)
         style.configure("Treeview.Heading", font=(None, 10, 'bold'))
+        style.map("Treeview.Heading", background=[("!disabled", "active", "pressed", "lightgrey")])
 
         for col in columns:
             self.tree.heading(col, text=col)
