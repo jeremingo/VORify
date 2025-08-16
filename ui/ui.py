@@ -142,9 +142,9 @@ class VORApp:
     def update_data(self, json_data):
         try:
             parsed = json.loads(json_data)
+            self.current_location = parsed.get("location")
             if self.current_location is not None:
               self.location_history.append((self.current_location["lat"], self.current_location["lon"]))
-            self.current_location = parsed.get("location")
             stations = parsed.get("stations", [])
 
             self.vor_data = [
