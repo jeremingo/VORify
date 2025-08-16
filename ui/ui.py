@@ -35,18 +35,28 @@ class VORApp:
         self.map_frame = ttk.Frame(self.root)
         #self.map_frame.pack(fill=tk.BOTH, expand=True)
 
+
+        map_and_label = ttk.Frame(self.map_frame)
+
+        self.map_instruction_label = ttk.Label(
+            map_and_label,
+            font=(None, 18)
+        )
+        self.map_instruction_label.pack(side=tk.TOP)
+
         control_frame = ttk.Frame(self.map_frame)
         control_frame.pack(side=tk.RIGHT, pady=5)
 
         self.map_widget = TkinterMapView(
-            self.map_frame,
+            map_and_label,
             corner_radius=0,
             database_path=database_path,
             use_database_only=True,
             max_zoom=7
         )
-        self.map_widget.pack(side=tk.LEFT, fill="both", expand=True)
+        self.map_widget.pack(side=tk.BOTTOM, fill="both", expand=True)
         self.map_widget.canvas.delete("button")
+        map_and_label.pack(side=tk.LEFT, fill="both", expand=True)
 
         self.map_widget.canvas.unbind("<B1-Motion>")
         self.map_widget.canvas.unbind("<ButtonRelease-1>")
@@ -193,6 +203,7 @@ class VORApp:
 
     def open_map_picker(self):
         self.open_map()
+        self.map_instruction_label.config(text="Tap to pick location to search from:")
 
         self.map_widget.set_position(20, 0)
         self.map_widget.set_zoom(0)
@@ -243,6 +254,7 @@ class VORApp:
     def open_map_view(self):
         self.show_marks = True
         self.open_map()
+        self.map_instruction_label.config(text="Current location and path:")
 
         self.map_widget.canvas.unbind("<ButtonRelease-1>")
 
