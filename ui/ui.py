@@ -79,14 +79,14 @@ class VORApp:
         style.map("Flash.TButton", background=[("!disabled", "active", "pressed", "white")])
 
 
-        ttk.Button(control_frame, text="X", style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="←", style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="→", style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↑", style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↓", style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="X", takefocus=0, style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="←", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="→", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↑", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↓", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
 
-        ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="+", takefocus=0, style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="-", takefocus=0, style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
         self.open_map_picker()
         self.start_flashing(self.change_origin_button)
@@ -127,9 +127,9 @@ class VORApp:
         buttons = ttk.Frame(header)
         header.pack(fill=tk.X)
 
-        self.current_location_button = ttk.Button(buttons, text="V", style="Big.TButton", width=3, command=self.open_map_view)
+        self.current_location_button = ttk.Button(buttons, text="V", takefocus=0, style="Big.TButton", width=3, command=self.open_map_view)
         self.current_location_button.pack(side=tk.RIGHT, pady=6, padx=5)
-        self.change_origin_button = ttk.Button(buttons, text="P", style="Big.TButton", width=3, command=self.open_map_picker)
+        self.change_origin_button = ttk.Button(buttons, text="P", takefocus=0, style="Big.TButton", width=3, command=self.open_map_picker)
         self.change_origin_button.pack(side=tk.RIGHT, pady=6, padx=5)
         buttons.pack(side=tk.RIGHT)
         self.frame = ttk.Frame(self.main_frame)
