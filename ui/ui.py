@@ -162,7 +162,7 @@ class VORApp:
 
         def on_mouse_drag(event):
             delta = self.start_y - event.y
-            self.tree.yview_scroll(int(delta/12), "units")  # scroll proportionally
+            self.tree.yview_scroll(int(delta/17), "units")  # scroll proportionally
             self.start_y = event.y
 
         self.tree.bind("<ButtonPress-1>", on_button_press)
