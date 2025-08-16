@@ -26,7 +26,7 @@ class VORApp:
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
-        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", not self.root.attributes("-fullscreen")))
 
         self.create_widgets()
         threading.Thread(target=self.listen_for_input, daemon=True).start()
