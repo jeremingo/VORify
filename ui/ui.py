@@ -281,7 +281,7 @@ class VORApp:
                     self.path.set_position_list(self.location_history)
                 else:
                     self.path = self.map_widget.set_path(self.location_history, width=3)
-        else:
+        elif self.had_location:
           self.had_location = False
           self.map_widget.set_zoom(0)
           self.map_widget.set_position(20, 0)
@@ -292,6 +292,10 @@ class VORApp:
         self.map_instruction_label.config(text="Current location and path:")
 
         self.map_widget.canvas.unbind("<ButtonRelease-1>")
+
+        if self.current_location is None:
+            self.map_widget.set_zoom(0)
+            self.map_widget.set_position(20, 0)
 
         self.update_marks()
 
