@@ -24,6 +24,7 @@ class VORApp:
         self.path = None
         self.had_location = False
         self.stage = 0
+        self.flashing_state = {}
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
@@ -73,6 +74,7 @@ class VORApp:
         btn_font = tkFont.Font(size=27, weight="bold")  # bigger font
         style = ttk.Style()
         style.configure("Big.TButton", font=btn_font)
+        style.configure("Flash.TButton", font=btn_font, background="white")
 
 
         ttk.Button(control_frame, text="X", style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
@@ -86,6 +88,32 @@ class VORApp:
 
         self.open_map_picker()
 
+
+    def do_flash(self, btn):
+        """Toggle button style while flashing is active."""
+        state = self.flashing_state.get(btn)
+        if state and state["flashing"]:
+            current = btn.cget("style")
+            new_style = "Flash.TButton" if current == "Big.TButton" else "Big.TButton"
+            btn.config(style=new_style)
+            state["job"] = root.after(800, self.do_flash, btn)  # schedule next flash
+
+    def start_flashing(self, btn):
+        """Begin flashing a specific button."""
+        if btn not in self.flashing_state or not self.flashing_state[btn]["flashing"]:
+            self.flashing_state[btn] = {"flashing": True, "job": None}
+            self.do_flash(btn)
+
+    def stop_flashing(self, btn):
+        """Stop flashing a specific button and reset to normal style."""
+        state = self.flashing_state.get(btn)
+        if state:
+            state["flashing"] = False
+            if state["job"]:
+                self.root.after_cancel(state["job"])
+                state["job"] = None
+            btn.config(style="Big.TButton")
+
     def create_widgets(self):
         self.main_frame = ttk.Frame(self.root)
 
@@ -96,8 +124,10 @@ class VORApp:
         buttons = ttk.Frame(header)
         header.pack(fill=tk.X)
 
-        ttk.Button(buttons, text="V", style="Big.TButton", width=3, command=self.open_map_view).pack(side=tk.RIGHT, pady=6, padx=5)
-        ttk.Button(buttons, text="P", style="Big.TButton", width=3, command=self.open_map_picker).pack(side=tk.RIGHT, pady=6, padx=5)
+        self.current_location_button = ttk.Button(buttons, text="V", style="Big.TButton", width=3, command=self.open_map_view)
+        self.current_location_button.pack(side=tk.RIGHT, pady=6, padx=5)
+        self.change_origin_button = ttk.Button(buttons, text="P", style="Big.TButton", width=3, command=self.open_map_picker)
+        self.change_origin_button.pack(side=tk.RIGHT, pady=6, padx=5)
         buttons.pack(side=tk.RIGHT)
         self.frame = ttk.Frame(self.main_frame)
         self.frame.pack(fill=tk.BOTH, expand=True)
@@ -126,10 +156,12 @@ class VORApp:
 
     def populate_table(self):
         if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
-            self.stage = 2
             lat = self.current_location["lat"]
             lon = self.current_location["lon"]
             self.location_label.config(text=f"Calculated Location - Lat: {lat:.4f} Lon: {lon:.4f}")
+            if not self.stage == 2:
+              self.start_flashing(self.current_location_button)
+              self.stage = 2
         elif self.origin_location is not None:
             if self.stage == 2:
                 self.location_label.config(text="Lost location. Choose origin again")
@@ -137,6 +169,8 @@ class VORApp:
                 lat = self.origin_location["lat"]
                 lon = self.origin_location["lon"]
                 self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
+        else:
+          self.stop_flashing(self.current_location_button)
 
         self.tree.delete(*self.tree.get_children())
         for row in self.vor_data:
@@ -223,6 +257,7 @@ class VORApp:
             self.update_data("{\"location\": null, \"stations\": []}")
             self.location_history = []
             self.stage = 1
+            self.stop_flashing(self.current_location_button)
 
             self.exit_map()
 
