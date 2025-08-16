@@ -23,6 +23,7 @@ class VORApp:
         self.mark = None
         self.path = None
         self.had_location = False
+        self.stage = 0
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
@@ -87,11 +88,8 @@ class VORApp:
         self.open_map_picker()
 
     def create_widgets(self):
-        self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
+        self.location_label = ttk.Label(self.root, text="Pick origin location to start search", font=(None, 16))
         self.location_label.pack(pady=5)
-
-        self.origin_location_label = ttk.Label(self.root, text="No origin location", font=(None, 16))
-        self.origin_location_label.pack(pady=5)
 
         self.map_button = ttk.Button(self.root, text="Pick Origin from Map", command=self.open_map_picker)
         self.map_button.pack(pady=5)
@@ -125,11 +123,17 @@ class VORApp:
 
     def populate_table(self):
         if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
+            self.stage = 2
             lat = self.current_location["lat"]
             lon = self.current_location["lon"]
-            self.location_label.config(text=f"Lat: {lat:.6f} Lon: {lon:.6f}")
-        else:
-            self.location_label.config(text="No known location")
+            self.location_label.config(text=f"Calculated Location - Lat: {lat:.4f} Lon: {lon:.4f}")
+        elif self.origin_location is not None:
+            if self.stage == 2:
+                self.location_label.config(text="Lost location. Choose origin again")
+            else:
+                lat = self.origin_location["lat"]
+                lon = self.origin_location["lon"]
+                self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
 
         self.tree.delete(*self.tree.get_children())
         for row in self.vor_data:
@@ -178,7 +182,6 @@ class VORApp:
         # Hide map UI and show main UI
         self.map_frame.pack_forget()
         self.location_label.pack(pady=5)
-        self.origin_location_label.pack(pady=5)
         self.map_button.pack(pady=5)
         self.map_view_button.pack(pady=5)
         self.frame.pack(fill=tk.BOTH, expand=True)
@@ -194,7 +197,6 @@ class VORApp:
     def open_map(self):
         # Hide main UI widgets
         self.location_label.pack_forget()
-        self.origin_location_label.pack_forget()
         self.map_button.pack_forget()
         self.map_view_button.pack_forget()
         self.frame.pack_forget()
@@ -218,13 +220,14 @@ class VORApp:
 
         def on_map_click(coord):
             lat, lon = coord
-            self.origin_location_label.config(text=f"Origin Lat: {lat:.6f} Lon: {lon:.6f}")
+            self.location_label.config(text=f"Searching from - Lat: {lat:.6f} Lon: {lon:.6f}")
             self.origin_location = {"lat": lat, "lon": lon}
 
             print(f"{lat} {lon}", flush=True)
 
             self.update_data("{\"location\": null, \"stations\": []}")
             self.location_history = []
+            self.stage = 1
 
             self.exit_map()
 
