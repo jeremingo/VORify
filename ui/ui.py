@@ -126,7 +126,7 @@ class VORApp:
         buttons = ttk.Frame(header)
         header.pack(fill=tk.X)
 
-        self.current_location_button = ttk.Button(buttons, text="V", takefocus=0, style="Big.TButton", width=3, command=self.open_map_view)
+        self.current_location_button = ttk.Button(buttons, text="M", takefocus=0, style="Big.TButton", width=3, command=self.open_map_view)
         self.current_location_button.pack(side=tk.RIGHT, pady=6, padx=5)
         self.change_origin_button = ttk.Button(buttons, text="P", takefocus=0, style="Big.TButton", width=3, command=self.open_map_picker)
         self.change_origin_button.pack(side=tk.RIGHT, pady=6, padx=5)
