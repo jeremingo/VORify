@@ -84,6 +84,8 @@ class VORApp:
         ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
         ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
+        self.open_map_picker()
+
     def create_widgets(self):
         self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
         self.location_label.pack(pady=5)
