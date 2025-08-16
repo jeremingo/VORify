@@ -43,7 +43,7 @@ class VORApp:
             corner_radius=0,
             database_path=database_path,
             use_database_only=True,
-            max_zoom=6
+            max_zoom=7
         )
         self.map_widget.pack(side=tk.LEFT, fill="both", expand=True)
         self.map_widget.canvas.delete("button")
@@ -222,7 +222,7 @@ class VORApp:
             lat = self.current_location["lat"]
             lon = self.current_location["lon"]
             if not self.had_location:
-                self.map_widget.set_zoom(6)
+                self.map_widget.set_zoom(7)
                 self.map_widget.set_position(lat, lon)
                 self.had_location = True
 
