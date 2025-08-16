@@ -87,6 +87,7 @@ class VORApp:
         ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
         self.open_map_picker()
+        self.start_flashing(self.change_origin_button)
 
 
     def do_flash(self, btn):
@@ -162,19 +163,32 @@ class VORApp:
             if not self.stage == 2:
               self.start_flashing(self.current_location_button)
               self.stage = 2
-        elif self.origin_location is not None:
-            if self.stage == 2:
-                self.location_label.config(text="Lost location. Choose origin again")
-            else:
-                lat = self.origin_location["lat"]
-                lon = self.origin_location["lon"]
-                self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
         else:
-          self.stop_flashing(self.current_location_button)
+            self.stop_flashing(self.current_location_button)
+            if self.origin_location is not None:
+                if self.stage == 2:
+                    self.location_label.config(text="Lost location. Choose origin again")
+                    self.start_flashing(self.change_origin_button)
+                else:
+                    lat = self.origin_location["lat"]
+                    lon = self.origin_location["lon"]
+                    self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
+            
+            if len(self.vor_data) <= 1:
+                self.location_label.config(text="Not enough stations in range. Choose origin again")
+                self.start_flashing(self.change_origin_button)
+
 
         self.tree.delete(*self.tree.get_children())
         for row in self.vor_data:
             self.tree.insert("", tk.END, values=row)
+
+    def empty_data(self):
+        lat = self.origin_location["lat"]
+        lon = self.origin_location["lon"]
+        self.location_label.config(text=f"Loading stations around - Lat: {lat:.4f} Lon: {lon:.4f}")
+            
+        self.tree.delete(*self.tree.get_children())
 
     def update_data(self, json_data):
         try:
@@ -254,10 +268,11 @@ class VORApp:
 
             print(f"{lat} {lon}", flush=True)
 
-            self.update_data("{\"location\": null, \"stations\": []}")
+            self.empty_data()
             self.location_history = []
             self.stage = 1
             self.stop_flashing(self.current_location_button)
+            self.stop_flashing(self.change_origin_button)
 
             self.exit_map()
 
