@@ -327,6 +327,11 @@ class VORApp:
         if self.current_location is None:
             self.map_widget.set_zoom(0)
             self.map_widget.set_position(20, 0)
+        else:
+            lat = self.current_location["lat"]
+            lon = self.current_location["lon"]
+            self.map_widget.set_zoom(7)
+            self.map_widget.set_position(lat, lon)
 
         self.update_marks()
 
