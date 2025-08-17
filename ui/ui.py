@@ -145,6 +145,9 @@ class VORApp:
         style.configure("Treeview", font=(None, 30), rowheight=56)
         style.configure("Treeview.Heading", font=(None, 10, 'bold'))
         style.map("Treeview.Heading", background=[("!disabled", "active", "pressed", "lightgrey")])
+        style.map("Treeview",
+          background=[("selected", "white")],  # keep selection color
+          foreground=[("selected", "black")])     # keep selection text color
 
         for col in columns:
             self.tree.heading(col, text=col)
