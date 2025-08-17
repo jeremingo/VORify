@@ -16,6 +16,8 @@ string entriesToJson(const vector<shared_ptr<Entry>>& entries, const optional<Lo
     oss << "null, ";
   }
 
+  auto now = chrono::steady_clock::now();
+
   oss << "\"stations\": [";
   for (size_t i = 0; i < entries.size(); ++i) {
     const auto& e = entries[i];
@@ -25,7 +27,8 @@ string entriesToJson(const vector<shared_ptr<Entry>>& entries, const optional<Lo
     oss << "\"frequency\":" << e->frequency << ",";
     oss << "\"location\":{\"lat\":\"" << e->location.lat << "\",\"lon\":\"" << e->location.lon << "\"},";
     oss << "\"is_identified\":" << (e->is_identified ? "true" : "false") << ",";
-    if (e->bearing.has_value()) {
+    if (e->bearing.has_value() && 
+         chrono::duration_cast<chrono::seconds>(now - e->bearing->timestamp).count() <= 17) {
       auto seconds = chrono::duration_cast<chrono::duration<double>>(
           e->bearing->timestamp.time_since_epoch()).count();
       oss << "\"bearing\":{\"value\":" << e->bearing->value << ",\"timestamp\":" << fixed << setprecision(6) << seconds << "},";
