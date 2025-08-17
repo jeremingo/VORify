@@ -24,13 +24,11 @@ vector<shared_ptr<Entry>> getStationsWithinRange(const double lat, const double 
     istringstream iss(buffer);
     Entry e;
     if (iss >> e.name >> e.id >> e.location.lat >> e.location.lon >> e.frequency) {
-      cout << e.id << endl;
       auto entry = make_shared<Entry>();
       entry->name = e.name;
       entry->id = e.id;
       entry->location = e.location;
       entry->frequency = e.frequency;
-      cout << entry->id << endl;
       entries.push_back(entry);
     } else {
       cerr << "Skipping malformed line: " << buffer;
