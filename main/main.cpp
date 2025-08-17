@@ -113,8 +113,6 @@ int main() {
     }
   });
 
-  string json = entriesToJson(entries, location);
-  child_stdin << json << endl;
   while (running) {
     this_thread::sleep_for(chrono::milliseconds(300));
 

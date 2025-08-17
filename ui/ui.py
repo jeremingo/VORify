@@ -23,6 +23,8 @@ class VORApp:
         self.mark = None
         self.path = None
         self.had_location = False
+        self.stage = 0
+        self.flashing_state = {}
 
         self.root.title("VOR Station Entries Table")
         self.root.attributes("-fullscreen", True)
@@ -33,7 +35,6 @@ class VORApp:
 
         # Create a frame for map view and controls
         self.map_frame = ttk.Frame(self.root)
-        #self.map_frame.pack(fill=tk.BOTH, expand=True)
 
 
         map_and_label = ttk.Frame(self.map_frame)
@@ -73,74 +74,144 @@ class VORApp:
         btn_font = tkFont.Font(size=27, weight="bold")  # bigger font
         style = ttk.Style()
         style.configure("Big.TButton", font=btn_font)
+        style.map("Big.TButton", background=[("!disabled", "active", "pressed", "lightgrey")])
+        style.configure("Flash.TButton", font=btn_font, background="white")
+        style.map("Flash.TButton", background=[("!disabled", "active", "pressed", "white")])
 
+        ttk.Button(control_frame, text="X", takefocus=0, style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="←", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="→", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↑", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="↓", takefocus=0, style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
 
-        ttk.Button(control_frame, text="X", style="Big.TButton", width=3, command=lambda: self.exit_map()).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="←", style="Big.TButton", width=3, command=lambda: move(dx=-1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="→", style="Big.TButton", width=3, command=lambda: move(dx=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↑", style="Big.TButton", width=3, command=lambda: move(dy=1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="↓", style="Big.TButton", width=3, command=lambda: move(dy=-1)).pack(side=tk.TOP, pady=6, padx=5)
-
-        ttk.Button(control_frame, text="+", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
-        ttk.Button(control_frame, text="-", style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="+", takefocus=0, style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom + 1)).pack(side=tk.TOP, pady=6, padx=5)
+        ttk.Button(control_frame, text="-", takefocus=0, style="Big.TButton", width=3, command=lambda: set_zoom(self.map_widget.zoom - 1)).pack(side=tk.TOP, pady=6, padx=5)
 
         self.open_map_picker()
+        self.start_flashing(self.change_origin_button)
+
+
+    def do_flash(self, btn):
+        """Toggle button style while flashing is active."""
+        state = self.flashing_state.get(btn)
+        if state and state["flashing"]:
+            current = btn.cget("style")
+            new_style = "Flash.TButton" if current == "Big.TButton" else "Big.TButton"
+            btn.config(style=new_style)
+            state["job"] = root.after(800, self.do_flash, btn)  # schedule next flash
+
+    def start_flashing(self, btn):
+        """Begin flashing a specific button."""
+        if btn not in self.flashing_state or not self.flashing_state[btn]["flashing"]:
+            self.flashing_state[btn] = {"flashing": True, "job": None}
+            self.do_flash(btn)
+
+    def stop_flashing(self, btn):
+        """Stop flashing a specific button and reset to normal style."""
+        state = self.flashing_state.get(btn)
+        if state:
+            state["flashing"] = False
+            if state["job"]:
+                self.root.after_cancel(state["job"])
+                state["job"] = None
+            btn.config(style="Big.TButton")
 
     def create_widgets(self):
-        self.location_label = ttk.Label(self.root, text="No known location", font=(None, 16))
-        self.location_label.pack(pady=5)
+        self.main_frame = ttk.Frame(self.root)
 
-        self.origin_location_label = ttk.Label(self.root, text="No origin location", font=(None, 16))
-        self.origin_location_label.pack(pady=5)
+        header = ttk.Frame(self.main_frame)
+        self.location_label = ttk.Label(header, text="Pick origin location to start search", font=(None, 16))
+        self.location_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
-        self.map_button = ttk.Button(self.root, text="Pick Origin from Map", command=self.open_map_picker)
-        self.map_button.pack(pady=5)
+        buttons = ttk.Frame(header)
+        header.pack(fill=tk.X)
 
-        self.map_view_button = ttk.Button(self.root, text="Show Location on Map", command=self.open_map_view)
-        self.map_view_button.pack(pady=5)
-
-        self.frame = ttk.Frame(self.root)
+        self.current_location_button = ttk.Button(buttons, text="M", takefocus=0, style="Big.TButton", width=3, command=self.open_map_view)
+        self.current_location_button.pack(side=tk.RIGHT, pady=6, padx=5)
+        self.change_origin_button = ttk.Button(buttons, text="P", takefocus=0, style="Big.TButton", width=3, command=self.open_map_picker)
+        self.change_origin_button.pack(side=tk.RIGHT, pady=6, padx=5)
+        buttons.pack(side=tk.RIGHT)
+        self.frame = ttk.Frame(self.main_frame)
         self.frame.pack(fill=tk.BOTH, expand=True)
 
         vsb = ttk.Scrollbar(self.frame, orient="vertical")
-        hsb = ttk.Scrollbar(self.frame, orient="horizontal")
 
         columns = ("Name", "Ident", "Frequency", "Bearing", "Distance")
         self.tree = ttk.Treeview(self.frame, columns=columns, show="headings",
-                                 yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+                                 yscrollcommand=vsb.set)
+
 
         style = ttk.Style()
-        style.configure("Treeview", font=(None, 30), rowheight=50)
+        style.configure("Treeview", font=(None, 30), rowheight=56)
         style.configure("Treeview.Heading", font=(None, 10, 'bold'))
+        style.map("Treeview.Heading", background=[("!disabled", "active", "pressed", "lightgrey")])
+        style.map("Treeview",
+          background=[("selected", "white")],  # keep selection color
+          foreground=[("selected", "black")])     # keep selection text color
 
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor="center", width=120)
 
         vsb.config(command=self.tree.yview)
-        hsb.config(command=self.tree.xview)
         vsb.pack(side="right", fill="y")
-        hsb.pack(side="bottom", fill="x")
         self.tree.pack(fill=tk.BOTH, expand=True)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.start_y = 0
+
+        def on_button_press(event):
+            self.start_y = event.y
+
+        def on_mouse_drag(event):
+            delta = self.start_y - event.y
+            self.tree.yview_scroll(int(delta/17), "units")  # scroll proportionally
+            self.start_y = event.y
+
+        self.tree.bind("<ButtonPress-1>", on_button_press)
+        self.tree.bind("<B1-Motion>", on_mouse_drag)
 
     def populate_table(self):
         if self.current_location and "lat" in self.current_location and "lon" in self.current_location:
             lat = self.current_location["lat"]
             lon = self.current_location["lon"]
-            self.location_label.config(text=f"Lat: {lat:.6f} Lon: {lon:.6f}")
+            self.location_label.config(text=f"Calculated Location - Lat: {lat:.4f} Lon: {lon:.4f}")
+            if not self.stage == 2:
+              self.start_flashing(self.current_location_button)
+              self.stage = 2
         else:
-            self.location_label.config(text="No known location")
+            self.stop_flashing(self.current_location_button)
+            if self.origin_location is not None:
+                if self.stage == 2:
+                    self.location_label.config(text="Lost location. Pick origin again")
+                    self.start_flashing(self.change_origin_button)
+                else:
+                    lat = self.origin_location["lat"]
+                    lon = self.origin_location["lon"]
+                    self.location_label.config(text=f"Searching from - Lat: {lat:.4f} Lon: {lon:.4f}")
+            
+            if len(self.vor_data) <= 1:
+                self.location_label.config(text="Not enough stations in range. Pick origin again")
+                self.start_flashing(self.change_origin_button)
+
 
         self.tree.delete(*self.tree.get_children())
         for row in self.vor_data:
             self.tree.insert("", tk.END, values=row)
 
+    def empty_data(self):
+        lat = self.origin_location["lat"]
+        lon = self.origin_location["lon"]
+        self.location_label.config(text=f"Loading stations around - Lat: {lat:.4f} Lon: {lon:.4f}")
+            
+        self.tree.delete(*self.tree.get_children())
+
     def update_data(self, json_data):
         try:
             parsed = json.loads(json_data)
+            self.current_location = parsed.get("location")
             if self.current_location is not None:
               self.location_history.append((self.current_location["lat"], self.current_location["lon"]))
-            self.current_location = parsed.get("location")
             stations = parsed.get("stations", [])
 
             self.vor_data = [
@@ -177,12 +248,7 @@ class VORApp:
 
         # Hide map UI and show main UI
         self.map_frame.pack_forget()
-        self.location_label.pack(pady=5)
-        self.origin_location_label.pack(pady=5)
-        self.map_button.pack(pady=5)
-        self.map_view_button.pack(pady=5)
-        self.frame.pack(fill=tk.BOTH, expand=True)
-        self.tree.pack(fill=tk.BOTH, expand=True)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.show_marks = False
         if self.mark is not None:
             self.mark.delete()
@@ -193,12 +259,7 @@ class VORApp:
 
     def open_map(self):
         # Hide main UI widgets
-        self.location_label.pack_forget()
-        self.origin_location_label.pack_forget()
-        self.map_button.pack_forget()
-        self.map_view_button.pack_forget()
-        self.frame.pack_forget()
-        self.tree.pack_forget()
+        self.main_frame.pack_forget()
 
         self.map_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -218,13 +279,16 @@ class VORApp:
 
         def on_map_click(coord):
             lat, lon = coord
-            self.origin_location_label.config(text=f"Origin Lat: {lat:.6f} Lon: {lon:.6f}")
+            self.location_label.config(text=f"Searching from - Lat: {lat:.6f} Lon: {lon:.6f}")
             self.origin_location = {"lat": lat, "lon": lon}
 
             print(f"{lat} {lon}", flush=True)
 
-            self.update_data("{\"location\": null, \"stations\": []}")
+            self.empty_data()
             self.location_history = []
+            self.stage = 1
+            self.stop_flashing(self.current_location_button)
+            self.stop_flashing(self.change_origin_button)
 
             self.exit_map()
 
@@ -248,7 +312,7 @@ class VORApp:
                     self.path.set_position_list(self.location_history)
                 else:
                     self.path = self.map_widget.set_path(self.location_history, width=3)
-        else:
+        elif self.had_location:
           self.had_location = False
           self.map_widget.set_zoom(0)
           self.map_widget.set_position(20, 0)
@@ -259,6 +323,10 @@ class VORApp:
         self.map_instruction_label.config(text="Current location and path:")
 
         self.map_widget.canvas.unbind("<ButtonRelease-1>")
+
+        if self.current_location is None:
+            self.map_widget.set_zoom(0)
+            self.map_widget.set_position(20, 0)
 
         self.update_marks()
 
