@@ -108,7 +108,7 @@ int main() {
         location = nullopt;
         cout << "Updated origin_location to: " << lat << ", " << lon << endl;
 
-        updateStationsWithinRange(entries, lat, lon, 200);
+        updateStationsWithinRange(entries, lat, lon, 400);
         stationChangeNeeded.store(false);
         string json = entriesToJson(entries, location);
         child_stdin << json << endl;
@@ -160,7 +160,7 @@ int main() {
       if (location) {
         cout << location->lat << " " << location->lon << "\n";
 
-        updateStationsWithinRange(entries, stod(location->lat), stod(location->lon), 200);
+        updateStationsWithinRange(entries, stod(location->lat), stod(location->lon), 400);
 
         for (auto& entry : entries) {
           entry->distance = computeDistance(
