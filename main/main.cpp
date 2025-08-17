@@ -59,6 +59,9 @@ void startBluetoothServer(optional<Location>& location, bool& running) {
       if (location) {
         sendToBluetooth(bluetoothPipe, generateNMEA(stod(location->lat), stod(location->lon)));
       }
+      else {
+        sendToBluetooth(bluetoothPipe, "$GPGGA,,,,,,0,,,,,,,,*66\n");
+      }
     }
   }).detach();
 }
