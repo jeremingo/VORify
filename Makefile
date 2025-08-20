@@ -1,6 +1,6 @@
 SUBDIRS := $(wildcard */)
 
-EXCLUDE := venv/
+EXCLUDE := venv/ screenshots/
 
 SUBDIRS := $(filter-out $(EXCLUDE), $(SUBDIRS))
 
