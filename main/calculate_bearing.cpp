@@ -11,7 +11,7 @@
 using namespace std;
 
 optional<double> calculateBearing(string id, double frequency) {
-  string cmd = "../mock-bearing/mock-bearing " + id + " " + to_string(frequency);
+  string cmd = "../wrap-bearing-calculator/wrap-bearing-calculator ../bearing-calculator/vorify " + to_string(frequency);
 
   FILE* pipe = popen(cmd.c_str(), "r");
   if (!pipe) {
