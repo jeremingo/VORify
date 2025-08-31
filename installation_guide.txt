@@ -1,6 +1,43 @@
 VORify Installation
 
+
+- Install dependencies
+
+sudo apt-get update
+sudo apt-get install -y gcc librtlsdr-dev libbluetooth-dev libasound2-dev autoconf automake libtool pkg-config git libgeographiclib-dev libboost-all-dev
+git clone https://github.com/jgaeddert/liquid-dsp.git
+cd liquid-dsp
+./bootstrap.sh
+./configure
+make
+sudo make install
+sudo ldconfig
+cd ..
+
+
 - Clone repository and cd to directory
 
 git clone https://github.com/jeremingo/VORify.git
 cd VORify
+
+
+- Create and configure python venv
+
+python3 -m venv venv
+source venv/bin/activate
+pip3 install tkintermapview
+deactivate
+
+
+- Make project
+
+make
+
+
+- To start as service that runs on startup:
+*** Verify file contents before copying (username, executable location)
+
+sudo cp vorify.service /etc/systemd/system/
+sudo systemctl enable vorify.service
+
+- Before running, pair bluetooth device for gps data using the Raspberry Pi UI
