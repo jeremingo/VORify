@@ -40,4 +40,5 @@ make
 sudo cp vorify.service /etc/systemd/system/
 sudo systemctl enable vorify.service
 
+
 - Before running, pair bluetooth device for gps data using the Raspberry Pi UI
