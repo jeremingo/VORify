@@ -1,0 +1,6 @@
+VORify Installation
+
+- Clone repository and cd to directory
+
+git clone https://github.com/jeremingo/VORify.git
+cd VORify
